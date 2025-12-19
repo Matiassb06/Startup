@@ -7,15 +7,13 @@ Plataforma que conecta estudiantes con proyectos reales de empresas.
 ```text
 Startup/
 ├── Frontend/          # Aplicaciones frontend (Next.js)
-│   └── skillbridge-landing/
-│       ├── components/
-│       │   ├── landing/    # Componentes de landing
-│       │   └── (auth, dashboard por agregar)
-│       └── constants/
-│           ├── landing.ts  # Datos de landing
-│           └── (otros por feature)
-├── Backend/           # API y servicios backend (NestJS)
-└── Database/          # Esquemas y migraciones (Prisma)
+│   ├── app/           # App router de Next.js
+│   ├── components/    # Componentes organizados por features
+│   │   └── landing/   # Componentes de landing page
+│   ├── constants/     # Datos y configuraciones
+│   └── types/         # TypeScript types
+├── Backend/           # API y servicios backend (próximo)
+└── Database/          # Esquemas y migraciones (próximo)
 ```
 
 ### Organización por Features
@@ -31,18 +29,18 @@ El frontend está organizado por módulos/features para facilitar escalabilidad:
 ### Frontend
 
 - Next.js 16 + TypeScript
-- Tailwind CSS
-- React Hook Form
-- TanStack Query
+- Tailwind CSS v4
+- Animaciones CSS personalizadas
+- Diseño dark mode responsive
 
-### Backend
+### Backend (Próximo)
 
 - NestJS + TypeScript
 - PostgreSQL + Prisma
 - JWT Authentication
 - Python + FastAPI (IA)
 
-### Database
+### Database (Próximo)
 
 - PostgreSQL
 - Redis (cache)
@@ -56,8 +54,10 @@ El frontend está organizado por módulos/features para facilitar escalabilidad:
   - [x] Paleta de colores (Azul + Naranja)
   - [x] Responsive design
   - [x] Secciones completas (Hero, Features, How It Works, Pricing, Contact)
+  - [x] Animaciones personalizadas
   - [x] Planes de precios
   - [x] Formulario de contacto
+  - [x] Optimización de código
 - [ ] Autenticación
 - [ ] Dashboard estudiantes
 - [ ] Dashboard empresas
