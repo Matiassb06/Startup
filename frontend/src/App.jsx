@@ -22,6 +22,7 @@ const featureCards = [
 
 export default function App() {
   const [adminId, setAdminId] = useState(null);
+  const [companyId, setCompanyId] = useState(null);
   const [studentId, setStudentId] = useState(null);
   const [opportunities, setOpportunities] = useState([]);
   const [isLoadingOpportunities, setIsLoadingOpportunities] = useState(true);
@@ -35,6 +36,10 @@ export default function App() {
   const [isLoadingPending, setIsLoadingPending] = useState(false);
   const [adminStatus, setAdminStatus] = useState({ type: "", message: "" });
   const [courseDraftByOpportunity, setCourseDraftByOpportunity] = useState({});
+  const [companyOpportunities, setCompanyOpportunities] = useState([]);
+  const [isLoadingCompanyOps, setIsLoadingCompanyOps] = useState(false);
+  const [companyStatus, setCompanyStatus] = useState({ type: "", message: "" });
+  const [companyForm, setCompanyForm] = useState({ title: "", description: "", requirements: "" });
 
   useEffect(() => {
     const bootstrapStudent = async () => {
@@ -89,6 +94,32 @@ export default function App() {
       return resolvedId;
     };
 
+    const bootstrapCompany = async () => {
+      const response = await fetch(`${API_BASE}/users/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "acme@company.com",
+          password_hash: "demo_company_hash",
+          role: "company",
+          profile_data: { source: "landing_phase1_company" },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudo inicializar el perfil de empresa.");
+      }
+
+      const payload = await response.json();
+      const resolvedId = payload.user_id ?? payload.id;
+      if (!resolvedId) {
+        throw new Error("El backend no devolvió el ID de empresa.");
+      }
+
+      setCompanyId(resolvedId);
+      return resolvedId;
+    };
+
     const loadPendingOpportunities = async (resolvedAdminId) => {
       setIsLoadingPending(true);
       try {
@@ -103,6 +134,23 @@ export default function App() {
         setAdminStatus({ type: "error", message });
       } finally {
         setIsLoadingPending(false);
+      }
+    };
+
+    const loadCompanyOpportunities = async (resolvedCompanyId) => {
+      setIsLoadingCompanyOps(true);
+      try {
+        const response = await fetch(`${API_BASE}/company/opportunities/?company_id=${resolvedCompanyId}`);
+        if (!response.ok) {
+          throw new Error("No se pudieron cargar tus oportunidades de empresa.");
+        }
+        const payload = await response.json();
+        setCompanyOpportunities(Array.isArray(payload) ? payload : []);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Error al cargar oportunidades de empresa.";
+        setCompanyStatus({ type: "error", message });
+      } finally {
+        setIsLoadingCompanyOps(false);
       }
     };
 
@@ -130,8 +178,10 @@ export default function App() {
       try {
         const resolvedStudentId = await bootstrapStudent();
         const resolvedAdminId = await bootstrapAdmin();
+        const resolvedCompanyId = await bootstrapCompany();
         await loadOpportunities(resolvedStudentId);
         await loadPendingOpportunities(resolvedAdminId);
+        await loadCompanyOpportunities(resolvedCompanyId);
       } catch (error) {
         const message = error instanceof Error ? error.message : "Error inesperado al iniciar.";
         setOpportunityError(message);
@@ -180,6 +230,20 @@ export default function App() {
 
     const payload = await response.json();
     setPendingOpportunities(Array.isArray(payload) ? payload : []);
+  };
+
+  const refreshCompanyOpportunities = async () => {
+    if (!companyId) {
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/company/opportunities/?company_id=${companyId}`);
+    if (!response.ok) {
+      throw new Error("No se pudo actualizar la lista de empresa.");
+    }
+
+    const payload = await response.json();
+    setCompanyOpportunities(Array.isArray(payload) ? payload : []);
   };
 
   const handleWatchCourse = async (opportunity) => {
@@ -345,11 +409,55 @@ export default function App() {
         throw new Error("No se pudo publicar la oportunidad.");
       }
 
-      await Promise.all([refreshPendingOpportunities(), refreshStudentOpportunities()]);
+      await Promise.all([refreshPendingOpportunities(), refreshStudentOpportunities(), refreshCompanyOpportunities()]);
       setAdminStatus({ type: "success", message: "Oportunidad publicada ✅" });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error al publicar oportunidad.";
       setAdminStatus({ type: "error", message });
+    }
+  };
+
+  const handleCompanyFormChange = (field, value) => {
+    setCompanyForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCreateCompanyOpportunity = async (event) => {
+    event.preventDefault();
+
+    if (!companyId) {
+      setCompanyStatus({ type: "error", message: "Empresa no inicializada." });
+      return;
+    }
+
+    if (!companyForm.title.trim() || !companyForm.description.trim()) {
+      setCompanyStatus({ type: "error", message: "Título y descripción son obligatorios." });
+      return;
+    }
+
+    setCompanyStatus({ type: "", message: "" });
+
+    try {
+      const response = await fetch(`${API_BASE}/company/opportunities/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actor_user_id: companyId,
+          title: companyForm.title.trim(),
+          description: companyForm.description.trim(),
+          requirements: companyForm.requirements.trim() || null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudo crear la oportunidad de empresa.");
+      }
+
+      setCompanyForm({ title: "", description: "", requirements: "" });
+      await Promise.all([refreshCompanyOpportunities(), refreshPendingOpportunities()]);
+      setCompanyStatus({ type: "success", message: "Oportunidad creada en pending_review." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Error al crear oportunidad.";
+      setCompanyStatus({ type: "error", message });
     }
   };
 
@@ -498,6 +606,81 @@ export default function App() {
           )}
         </section>
 
+        <section className="mt-16 rounded-3xl border border-indigo-400/20 bg-white/5 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+          <h2 className="text-2xl font-bold text-white sm:text-3xl">Student Panel (MVP)</h2>
+          <p className="mt-3 text-slate-300">
+            Visualiza tu progreso por vacante y desbloquea la postulación al completar el curso.
+          </p>
+
+          {isLoadingOpportunities ? (
+            <div className="mt-6 rounded-xl border border-white/10 bg-slate-900/50 p-4 text-slate-300">Cargando panel de estudiante...</div>
+          ) : visibleOpportunities.length === 0 ? (
+            <div className="mt-6 rounded-xl border border-white/10 bg-slate-900/50 p-4 text-slate-300">No hay vacantes disponibles para mostrar.</div>
+          ) : (
+            <div className="mt-6 grid gap-4">
+              {visibleOpportunities.map((opportunity) => {
+                const isUnlocked = Boolean(opportunity.can_apply);
+                const progressPercent = Number(opportunity.progress_percent ?? (opportunity.course_completed ? 100 : 0));
+
+                return (
+                  <article key={`student-panel-${opportunity.id}`} className="rounded-2xl border border-white/10 bg-slate-900/60 p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">{opportunity.title}</h3>
+                        <p className="mt-1 text-sm text-slate-300">Empresa: {opportunity.company_name ?? "Empresa Partner"}</p>
+                      </div>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          isUnlocked
+                            ? "border border-emerald-400/40 bg-emerald-500/15 text-emerald-300"
+                            : "border border-amber-400/40 bg-amber-500/15 text-amber-300"
+                        }`}
+                      >
+                        {isUnlocked ? "Unlocked" : "Locked"}
+                      </span>
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
+                        <span>Progreso del curso</span>
+                        <span>{progressPercent}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-800">
+                        <div
+                          className="h-2 rounded-full bg-indigo-500 transition-all"
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleWatchCourse(opportunity)}
+                        className="rounded-lg border border-white/15 bg-slate-950/80 px-3 py-2 text-xs font-semibold text-slate-100 transition hover:border-indigo-400/50"
+                      >
+                        {opportunity.course_content_url ? "Completar Curso" : "Curso pendiente"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!isUnlocked}
+                        onClick={() => handleApply(opportunity.id)}
+                        className={`rounded-lg px-3 py-2 text-xs font-semibold text-white transition ${
+                          isUnlocked
+                            ? "bg-indigo-500 hover:bg-indigo-400"
+                            : "cursor-not-allowed bg-slate-700 text-slate-300"
+                        }`}
+                      >
+                        Apply Now
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
         <section className="mt-16 rounded-3xl border border-white/10 bg-gradient-to-r from-indigo-600/20 to-slate-800/60 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
           <h2 className="text-2xl font-bold text-white sm:text-3xl">
             Sé el primero en saber cuando lancemos nuevas vacantes
@@ -585,6 +768,75 @@ export default function App() {
                       Publicar
                     </button>
                   </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-16 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+          <h2 className="text-2xl font-bold text-white sm:text-3xl">Company Panel (MVP)</h2>
+          <p className="mt-3 text-slate-300">Publica oportunidades y monitorea su estado: pending_review, published o closed.</p>
+
+          {companyStatus.message ? (
+            <div
+              className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+                companyStatus.type === "success"
+                  ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+                  : "border-rose-400/30 bg-rose-500/10 text-rose-200"
+              }`}
+            >
+              {companyStatus.message}
+            </div>
+          ) : null}
+
+          <form className="mt-6 grid gap-3" onSubmit={handleCreateCompanyOpportunity}>
+            <input
+              type="text"
+              value={companyForm.title}
+              onChange={(event) => handleCompanyFormChange("title", event.target.value)}
+              placeholder="Título de la oportunidad"
+              className="rounded-lg border border-white/15 bg-slate-950/70 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none"
+              required
+            />
+            <textarea
+              value={companyForm.description}
+              onChange={(event) => handleCompanyFormChange("description", event.target.value)}
+              placeholder="Descripción"
+              rows={3}
+              className="rounded-lg border border-white/15 bg-slate-950/70 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none"
+              required
+            />
+            <input
+              type="text"
+              value={companyForm.requirements}
+              onChange={(event) => handleCompanyFormChange("requirements", event.target.value)}
+              placeholder="Requisitos (opcional)"
+              className="rounded-lg border border-white/15 bg-slate-950/70 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none"
+            />
+            <div>
+              <button
+                type="submit"
+                className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400"
+              >
+                Crear Oportunidad
+              </button>
+            </div>
+          </form>
+
+          {isLoadingCompanyOps ? (
+            <div className="mt-6 rounded-xl border border-white/10 bg-slate-900/50 p-4 text-slate-300">Cargando oportunidades de empresa...</div>
+          ) : companyOpportunities.length === 0 ? (
+            <div className="mt-6 rounded-xl border border-white/10 bg-slate-900/50 p-4 text-slate-300">Aún no has creado oportunidades.</div>
+          ) : (
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {companyOpportunities.map((companyOpp) => (
+                <article key={companyOpp.id} className="rounded-xl border border-white/10 bg-slate-900/60 p-4">
+                  <h3 className="font-semibold text-white">{companyOpp.title}</h3>
+                  <p className="mt-2 text-sm text-slate-300">{companyOpp.description}</p>
+                  <span className="mt-3 inline-flex rounded-full border border-white/20 bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-200">
+                    {companyOpp.status}
+                  </span>
                 </article>
               ))}
             </div>

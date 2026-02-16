@@ -102,3 +102,15 @@ class Application(Base):
 
     user = relationship("User", back_populates="applications")
     opportunity = relationship("Opportunity", back_populates="applications")
+
+
+class AnalyticsEvent(Base):
+    __tablename__ = "analytics_events"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    event_type = Column(String(80), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    opportunity_id = Column(BigInteger, ForeignKey("opportunities.id", ondelete="SET NULL"), nullable=True)
+    course_id = Column(BigInteger, ForeignKey("courses.id", ondelete="SET NULL"), nullable=True)
+    payload = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"), index=True)
