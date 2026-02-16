@@ -23,7 +23,7 @@ Assert ($root.status -eq 'active') 'Root endpoint no responde activo'
 Assert ($health.status -eq 'ok') 'Health endpoint no responde ok'
 
 Step 'Critical E2E smoke'
-. "$PSScriptRoot\qa_day7_smoke.ps1"
+. "$PSScriptRoot\phase1_smoke_test.ps1"
 
 Step 'Metrics summary snapshot'
 $metrics = Invoke-RestMethod -Method Get -Uri "$baseUrl/admin/metrics/summary?admin_id=$adminId&window_days=$windowDays"
