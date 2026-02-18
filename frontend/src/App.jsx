@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { MarketingLayout } from "./layouts/MarketingLayout";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { AboutUs } from "./pages/AboutUs";
 import { AuthPage } from "./pages/AuthPage";
@@ -13,10 +14,13 @@ import { StudentDashboard } from "./pages/StudentDashboard";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/metodologia" element={<Methodology />} />
-      <Route path="/nosotros" element={<AboutUs />} />
-      <Route path="/contacto" element={<Contact />} />
+      <Route element={<MarketingLayout />}>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/metodologia" element={<Methodology />} />
+        <Route path="/nosotros" element={<AboutUs />} />
+        <Route path="/contacto" element={<Contact />} />
+      </Route>
+
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/register" element={<AuthPage mode="register" />} />
 

@@ -1,3 +1,54 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+	::selection {
+		background-color: rgba(99, 102, 241, 0.35);
+		color: #f8fafc;
+	}
+
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: rgba(99, 102, 241, 0.4) rgba(15, 23, 42, 0.4);
+	}
+
+	*::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	*::-webkit-scrollbar-track {
+		background: rgba(24, 24, 27, 0.65);
+	}
+
+	*::-webkit-scrollbar-thumb {
+		border-radius: 999px;
+		background: linear-gradient(180deg, rgba(99, 102, 241, 0.75), rgba(79, 70, 229, 0.45));
+	}
+}
+
+@layer components {
+	.glass-panel {
+		@apply bg-white/5 backdrop-blur-2xl border border-white/10 shadow-xl;
+	}
+
+	.premium-button {
+		@apply relative overflow-hidden rounded-xl px-5 py-3 text-sm font-semibold transition duration-300;
+	}
+
+	.premium-button::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.4) 50%, transparent 65%);
+		background-size: 250% 100%;
+		opacity: 0;
+		transition: opacity 0.25s ease;
+	}
+
+	.premium-button:hover::before {
+		opacity: 1;
+		animation: shimmer 1.2s linear;
+	}
+}
