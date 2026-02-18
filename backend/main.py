@@ -10,9 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import models
 import database
 
-# 1. Crear tablas automáticamente
-models.Base.metadata.create_all(bind=database.engine)
-
 app = FastAPI(title="Train-To-Hire API")
 
 # 2. Configurar CORS (Para que el Frontend de React pueda conectarse)
@@ -127,6 +124,25 @@ class MetricsSummaryOut(StrictModel):
     apply_blocked: int
     unlock_rate_percent: float
     apply_success_rate_percent: float
+
+
+class ContactMessageIn(StrictModel):
+    name: str = Field(min_length=2, max_length=120)
+    email: str = Field(min_length=5, max_length=255)
+    subject: str = Field(min_length=3, max_length=255)
+    message: str = Field(min_length=10, max_length=2000)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if "@" not in normalized or "." not in normalized.split("@")[-1]:
+            raise ValueError("email inválido")
+        return normalized
+
+
+class ContactMessageOut(StrictModel):
+    message: str
 
 
 def _get_user_or_404(db: Session, user_id: int) -> models.User:
@@ -567,4 +583,20 @@ def read_metrics_summary(admin_id: int, window_days: int = 30, db: Session = Dep
         apply_blocked=apply_blocked,
         unlock_rate_percent=round(unlock_rate, 2),
         apply_success_rate_percent=round(apply_success_rate, 2),
+    )
+
+
+@app.post("/contact/", response_model=ContactMessageOut)
+def create_contact_message(payload: ContactMessageIn, db: Session = Depends(database.get_db)):
+    new_message = models.ContactMessage(
+        name=payload.name,
+        email=payload.email,
+        subject=payload.subject,
+        message=payload.message,
+    )
+    db.add(new_message)
+    db.commit()
+
+    return ContactMessageOut(
+        message="Mensaje recibido. Te contactaremos pronto.",
     )

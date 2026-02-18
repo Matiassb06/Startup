@@ -2,15 +2,21 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminDashboard } from "./pages/AdminDashboard";
+import { AboutUs } from "./pages/AboutUs";
 import { AuthPage } from "./pages/AuthPage";
+import { Contact } from "./pages/Contact";
 import { CompanyDashboard } from "./pages/CompanyDashboard";
 import { LandingPage } from "./pages/LandingPage";
+import { Methodology } from "./pages/Methodology";
 import { StudentDashboard } from "./pages/StudentDashboard";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/metodologia" element={<Methodology />} />
+      <Route path="/nosotros" element={<AboutUs />} />
+      <Route path="/contacto" element={<Contact />} />
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/register" element={<AuthPage mode="register" />} />
 

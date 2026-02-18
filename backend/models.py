@@ -114,3 +114,14 @@ class AnalyticsEvent(Base):
     course_id = Column(BigInteger, ForeignKey("courses.id", ondelete="SET NULL"), nullable=True)
     payload = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"), index=True)
+
+
+class ContactMessage(Base):
+    __tablename__ = "contact_messages"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    name = Column(String(120), nullable=False)
+    email = Column(String(255), nullable=False, index=True)
+    subject = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"), index=True)
