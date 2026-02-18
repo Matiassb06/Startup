@@ -19,9 +19,9 @@ export function MarketingLayout() {
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex min-h-screen flex-col">
         <MarketingNavbar />
-        <main>
+        <main className="flex-1 w-full">
           <Outlet />
         </main>
         <MarketingFooter />

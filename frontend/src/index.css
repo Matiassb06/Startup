@@ -3,52 +3,30 @@
 @tailwind utilities;
 
 @layer base {
-	::selection {
-		background-color: rgba(99, 102, 241, 0.35);
-		color: #f8fafc;
-	}
-
-	* {
-		scrollbar-width: thin;
-		scrollbar-color: rgba(99, 102, 241, 0.4) rgba(15, 23, 42, 0.4);
-	}
-
-	*::-webkit-scrollbar {
-		width: 8px;
-		height: 8px;
-	}
-
-	*::-webkit-scrollbar-track {
-		background: rgba(24, 24, 27, 0.65);
-	}
-
-	*::-webkit-scrollbar-thumb {
-		border-radius: 999px;
-		background: linear-gradient(180deg, rgba(99, 102, 241, 0.75), rgba(79, 70, 229, 0.45));
+	body {
+		@apply bg-zinc-950 text-zinc-100 antialiased;
 	}
 }
 
-@layer components {
+
+@layer utilities {
 	.glass-panel {
-		@apply bg-white/5 backdrop-blur-2xl border border-white/10 shadow-xl;
+		@apply border border-white/10 bg-white/5 backdrop-blur-2xl;
 	}
-
+	
 	.premium-button {
-		@apply relative overflow-hidden rounded-xl px-5 py-3 text-sm font-semibold transition duration-300;
+		@apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200;
 	}
+}
 
-	.premium-button::before {
-		content: "";
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.4) 50%, transparent 65%);
-		background-size: 250% 100%;
-		opacity: 0;
-		transition: opacity 0.25s ease;
-	}
-
-	.premium-button:hover::before {
-		opacity: 1;
-		animation: shimmer 1.2s linear;
-	}
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+	width: 8px;
+}
+::-webkit-scrollbar-track {
+	background: #09090b;
+}
+::-webkit-scrollbar-thumb {
+	background: #27272a;
+	border-radius: 4px;
 }

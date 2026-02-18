@@ -3,10 +3,10 @@ import { Sparkles } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 
 const navItems = [
-  { to: "/", label: "Inicio", end: true },
-  { to: "/metodologia", label: "Cómo funciona" },
-  { to: "/nosotros", label: "Quiénes somos" },
-  { to: "/contacto", label: "Contacto" },
+  { path: "/", label: "Inicio", end: true },
+  { path: "/metodologia", label: "Cómo funciona" },
+  { path: "/nosotros", label: "Quiénes somos" },
+  { path: "/contacto", label: "Contacto" },
 ];
 
 const buttonGlowClass = "premium-button transform hover:scale-[1.03]";
@@ -22,28 +22,27 @@ export function MarketingNavbar() {
 
         <nav className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 md:flex">
           {navItems.map((item) => (
-            <div key={item.to} className="relative">
-              <NavLink
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  `relative rounded-full px-4 py-2 text-sm transition ${isActive ? "text-white" : "text-zinc-300 hover:text-white"}`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive ? (
-                      <motion.span
-                        layoutId="navbar-active"
-                        className="absolute inset-0 rounded-full bg-white/10"
-                        transition={{ type: "spring", stiffness: 420, damping: 35 }}
-                      />
-                    ) : null}
-                    <span className="relative z-10">{item.label}</span>
-                  </>
-                )}
-              </NavLink>
-            </div>
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.end}
+              className={({ isActive }) =>
+                `relative rounded-full px-4 py-2 text-sm transition ${isActive ? "text-white" : "text-zinc-300 hover:text-white"}`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive ? (
+                    <motion.span
+                      layoutId="navbar-active"
+                      className="absolute inset-0 rounded-full bg-white/10"
+                      transition={{ type: "spring", stiffness: 420, damping: 35 }}
+                    />
+                  ) : null}
+                  <span className="relative z-10">{item.label}</span>
+                </>
+              )}
+            </NavLink>
           ))}
         </nav>
 

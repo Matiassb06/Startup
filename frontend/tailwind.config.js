@@ -10,7 +10,7 @@ export default {
           200: "#c7d2fe",
           300: "#a5b4fc",
           400: "#818cf8",
-          500: "#6366f1",
+          500: "#6366f1", // Main Indigo/Violet brand color
           600: "#4f46e5",
           700: "#4338ca",
           800: "#3730a3",
@@ -18,28 +18,11 @@ export default {
           950: "#1e1b4b",
         },
       },
-      keyframes: {
-        shimmer: {
-          "0%": { backgroundPosition: "200% 0" },
-          "100%": { backgroundPosition: "-200% 0" },
-        },
-        float: {
-          "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-10px)" },
-        },
-        "pulse-slow": {
-          "0%, 100%": { opacity: "0.6" },
-          "50%": { opacity: "1" },
-        },
-      },
-      animation: {
-        shimmer: "shimmer 2.4s linear infinite",
-        float: "float 4s ease-in-out infinite",
-        "pulse-slow": "pulse-slow 3.2s ease-in-out infinite",
-      },
       backgroundImage: {
-        "mesh-slate-violet":
-          "radial-gradient(circle at 15% 10%, rgba(99,102,241,0.2), transparent 38%), radial-gradient(circle at 85% 0%, rgba(139,92,246,0.16), transparent 34%), radial-gradient(circle at 55% 70%, rgba(56,189,248,0.08), transparent 30%)",
+        "mesh-slate-violet": "radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.15), transparent 35%), radial-gradient(circle at 85% 85%, rgba(79, 70, 229, 0.12), transparent 30%)",
+      },
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui"],
       },
     },
   },

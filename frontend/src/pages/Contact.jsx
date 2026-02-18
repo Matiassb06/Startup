@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Mail, Send, ShieldCheck, Sparkles } from "lucide-react";
+import { ChevronDown, Mail, Send, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 const fieldClass =
@@ -8,11 +8,27 @@ const labelClass =
   "pointer-events-none absolute left-4 top-4 text-xs uppercase tracking-[0.13em] text-zinc-400 transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-sm peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal peer-focus:top-2 peer-focus:text-[11px] peer-focus:uppercase peer-focus:tracking-[0.13em] peer-focus:text-brand-300";
 const buttonClass = "premium-button inline-flex items-center gap-2 bg-brand-500 text-white hover:scale-[1.03] hover:bg-brand-400 hover:shadow-[0_0_32px_rgba(99,102,241,0.4)]";
 
+const faqs = [
+  {
+    question: "How much does it cost?",
+    answer: "El plan se adapta al tamaño del equipo y al volumen de contratación. Diseñamos propuesta según objetivos de hiring.",
+  },
+  {
+    question: "Is it for students?",
+    answer: "Sí. Los estudiantes acceden a rutas validadas por oportunidades reales y desbloquean postulaciones con evidencia técnica.",
+  },
+  {
+    question: "How do companies join?",
+    answer: "Una empresa crea su espacio, publica necesidades y recibe talento pre-calificado con trazabilidad de progreso.",
+  },
+];
+
 export function Contact() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [openFaq, setOpenFaq] = useState(0);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -50,99 +66,134 @@ export function Contact() {
 
   return (
     <main className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-2">
-          <motion.section initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <p className="inline-flex items-center gap-2 rounded-full border border-brand-400/30 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brand-200">
-              <Sparkles className="h-4 w-4" /> Get in touch
-            </p>
-            <h1 className="mt-5 text-5xl font-semibold leading-tight text-white sm:text-6xl">
-              Hablemos de tu
-              <span className="block bg-gradient-to-r from-brand-300 to-violet-300 bg-clip-text text-transparent">próximo equipo.</span>
-            </h1>
-            <p className="mt-5 max-w-xl text-zinc-300">
-              Si eres empresa, institución o aliado, diseñamos un flujo de contratación orientado a evidencia técnica y velocidad operativa.
-            </p>
+      <div className="grid gap-8 lg:grid-cols-2">
+        <motion.section initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <p className="inline-flex items-center gap-2 rounded-full border border-brand-400/30 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-brand-200">
+            <Sparkles className="h-4 w-4" /> Get in touch
+          </p>
+          <h1 className="mt-5 text-5xl font-semibold leading-tight text-white sm:text-6xl">
+            Hablemos de tu
+            <span className="block bg-gradient-to-r from-brand-300 to-violet-300 bg-clip-text text-transparent">próximo equipo.</span>
+          </h1>
+          <p className="mt-5 max-w-xl text-zinc-300">
+            Si eres empresa, institución o aliado, diseñamos un flujo de contratación orientado a evidencia técnica y velocidad operativa.
+          </p>
 
-            <div className="mt-8 space-y-3">
-              <div className="glass-panel flex items-center gap-3 rounded-xl p-4">
-                <Mail className="h-5 w-5 text-brand-300" />
-                <div>
-                  <p className="text-xs uppercase tracking-[0.15em] text-zinc-400">Correo</p>
-                  <p className="text-sm text-zinc-100">hello@traintohire.dev</p>
-                </div>
-              </div>
-              <div className="glass-panel flex items-center gap-3 rounded-xl p-4">
-                <ShieldCheck className="h-5 w-5 text-brand-300" />
-                <div>
-                  <p className="text-xs uppercase tracking-[0.15em] text-zinc-400">Respuesta</p>
-                  <p className="text-sm text-zinc-100">SLA promedio: 24 horas hábiles</p>
-                </div>
+          <div className="mt-8 space-y-3">
+            <div className="glass-panel flex items-center gap-3 rounded-xl p-4">
+              <Mail className="h-5 w-5 text-brand-300" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.15em] text-zinc-400">Correo</p>
+                <p className="text-sm text-zinc-100">hello@traintohire.dev</p>
               </div>
             </div>
-          </motion.section>
-
-          <motion.form
-            onSubmit={submit}
-            className="glass-panel rounded-2xl p-6"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="relative">
-                <input
-                  placeholder=" "
-                  className={fieldClass}
-                  value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  required
-                />
-                <label className={labelClass}>Nombre</label>
-              </div>
-              <div className="relative">
-                <input
-                  type="email"
-                  placeholder=" "
-                  className={fieldClass}
-                  value={form.email}
-                  onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                  required
-                />
-                <label className={labelClass}>Email</label>
+            <div className="glass-panel flex items-center gap-3 rounded-xl p-4">
+              <ShieldCheck className="h-5 w-5 text-brand-300" />
+              <div>
+                <p className="text-xs uppercase tracking-[0.15em] text-zinc-400">Respuesta</p>
+                <p className="text-sm text-zinc-100">SLA promedio: 24 horas hábiles</p>
               </div>
             </div>
+          </div>
+        </motion.section>
 
-            <div className="relative mt-4">
+        <motion.form
+          onSubmit={submit}
+          className="glass-panel rounded-2xl p-6"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="relative">
               <input
                 placeholder=" "
                 className={fieldClass}
-                value={form.subject}
-                onChange={(e) => setForm((p) => ({ ...p, subject: e.target.value }))}
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                 required
               />
-              <label className={labelClass}>Asunto</label>
+              <label className={labelClass}>Nombre</label>
             </div>
-
-            <div className="relative mt-4">
-              <textarea
-                rows={6}
+            <div className="relative">
+              <input
+                type="email"
                 placeholder=" "
                 className={fieldClass}
-                value={form.message}
-                onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
+                value={form.email}
+                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
                 required
               />
-              <label className={labelClass}>Mensaje</label>
+              <label className={labelClass}>Email</label>
             </div>
+          </div>
 
-            <button type="submit" disabled={isSubmitting} className={`${buttonClass} mt-5 disabled:cursor-not-allowed disabled:opacity-70`}>
-              <Send className="h-4 w-4" /> {isSubmitting ? "Enviando..." : "Enviar Mensaje"}
-            </button>
+          <div className="relative mt-4">
+            <input
+              placeholder=" "
+              className={fieldClass}
+              value={form.subject}
+              onChange={(e) => setForm((p) => ({ ...p, subject: e.target.value }))}
+              required
+            />
+            <label className={labelClass}>Asunto</label>
+          </div>
 
-            {status ? <p className="mt-3 text-sm text-emerald-300">{status}</p> : null}
-            {error ? <p className="mt-3 text-sm text-rose-300">{error}</p> : null}
-          </motion.form>
+          <div className="relative mt-4">
+            <textarea
+              rows={6}
+              placeholder=" "
+              className={fieldClass}
+              value={form.message}
+              onChange={(e) => setForm((p) => ({ ...p, message: e.target.value }))}
+              required
+            />
+            <label className={labelClass}>Mensaje</label>
+          </div>
+
+          <button type="submit" disabled={isSubmitting} className={`${buttonClass} mt-5 disabled:cursor-not-allowed disabled:opacity-70`}>
+            <Send className="h-4 w-4" /> {isSubmitting ? "Enviando..." : "Enviar Mensaje"}
+          </button>
+
+          {status ? <p className="mt-3 text-sm text-emerald-300">{status}</p> : null}
+          {error ? <p className="mt-3 text-sm text-rose-300">{error}</p> : null}
+        </motion.form>
+      </div>
+
+      <motion.section
+        className="mt-10"
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45 }}
+        viewport={{ once: true, amount: 0.3 }}
+      >
+        <h2 className="text-2xl font-semibold text-white">FAQ</h2>
+        <div className="mt-4 space-y-3">
+          {faqs.map((faq, index) => {
+            const isOpen = openFaq === index;
+            return (
+              <article key={faq.question} className="glass-panel overflow-hidden rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setOpenFaq((prev) => (prev === index ? -1 : index))}
+                  className="flex w-full items-center justify-between px-4 py-4 text-left"
+                >
+                  <span className="font-medium text-white">{faq.question}</span>
+                  <ChevronDown className={`h-4 w-4 text-zinc-300 transition ${isOpen ? "rotate-180" : "rotate-0"}`} />
+                </button>
+                <motion.div
+                  initial={false}
+                  animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="overflow-hidden"
+                >
+                  <p className="px-4 pb-4 text-sm text-zinc-300">{faq.answer}</p>
+                </motion.div>
+              </article>
+            );
+          })}
         </div>
-      </main>
+      </motion.section>
+    </main>
   );
 }
