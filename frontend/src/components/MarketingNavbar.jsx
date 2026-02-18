@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { ChevronRight, LogIn, Sparkles } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 
 const navItems = [
@@ -8,8 +8,6 @@ const navItems = [
   { path: "/nosotros", label: "Quiénes somos" },
   { path: "/contacto", label: "Contacto" },
 ];
-
-const buttonGlowClass = "premium-button transform hover:scale-[1.03]";
 
 export function MarketingNavbar() {
   return (
@@ -47,11 +45,21 @@ export function MarketingNavbar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link to="/login" className={`${buttonGlowClass} border border-zinc-700 bg-zinc-900/70 text-zinc-100 hover:border-brand-400/60`}>
-            Iniciar Sesión
+          <Link
+            to="/login"
+            className="group inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-zinc-200 backdrop-blur-md transition duration-300 hover:border-white/25 hover:bg-white/[0.08] hover:text-white"
+          >
+            <LogIn className="h-4 w-4 text-zinc-300 transition group-hover:text-white" />
+            <span>Iniciar Sesión</span>
           </Link>
-          <Link to="/register" className={`${buttonGlowClass} bg-brand-500 text-white hover:bg-brand-400 hover:shadow-[0_0_28px_rgba(99,102,241,0.45)]`}>
-            Registrar
+
+          <Link
+            to="/register"
+            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition duration-300 hover:scale-[1.03] hover:bg-brand-400 hover:shadow-[0_0_30px_rgba(99,102,241,0.45)]"
+          >
+            <span className="pointer-events-none absolute inset-0 -translate-x-[130%] bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover:translate-x-[130%]" />
+            <span className="relative z-10">Registrar</span>
+            <ChevronRight className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
         </div>
       </div>
