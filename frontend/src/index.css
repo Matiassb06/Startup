@@ -4,13 +4,13 @@
 
 @layer base {
 	body {
-		@apply bg-zinc-950 text-zinc-100 antialiased;
+		@apply bg-gray-50 text-gray-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
 	}
 }
 
 @layer utilities {
 	.glass-panel {
-		@apply border border-white/10 bg-white/5 backdrop-blur-2xl;
+		@apply border border-gray-200 bg-white/80 backdrop-blur-2xl dark:border-white/10 dark:bg-white/5;
 	}
 
 	.premium-button {
@@ -58,13 +58,21 @@
 .shimmer-skeleton {
 	background: linear-gradient(
 		90deg,
-		rgba(39, 39, 42, 0.3) 25%,
-		rgba(63, 63, 70, 0.3) 50%,
-		rgba(39, 39, 42, 0.3) 75%
+		rgba(229, 231, 235, 0.5) 25%,
+		rgba(209, 213, 219, 0.5) 50%,
+		rgba(229, 231, 235, 0.5) 75%
 	);
 	background-size: 200% 100%;
 	animation: shimmer 1.5s ease-in-out infinite;
 	border-radius: 1rem;
+}
+:is(.dark .shimmer-skeleton) {
+	background: linear-gradient(
+		90deg,
+		rgba(39, 39, 42, 0.3) 25%,
+		rgba(63, 63, 70, 0.3) 50%,
+		rgba(39, 39, 42, 0.3) 75%
+	);
 }
 @keyframes shimmer {
 	0% {
@@ -135,9 +143,15 @@
 	background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-	background: rgba(161, 161, 170, 0.35);
+	background: rgba(161, 161, 170, 0.25);
 	border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
+	background: rgba(161, 161, 170, 0.45);
+}
+.dark ::-webkit-scrollbar-thumb {
+	background: rgba(161, 161, 170, 0.35);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
 	background: rgba(161, 161, 170, 0.55);
 }
