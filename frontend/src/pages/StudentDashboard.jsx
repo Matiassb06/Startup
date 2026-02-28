@@ -7,10 +7,14 @@ import {
   FileText,
   GraduationCap,
   LayoutDashboard,
+  Loader2,
+  MessageCircle,
   Send,
   Settings,
   ShieldAlert,
+  Sparkles,
   User,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -85,6 +89,13 @@ export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [status, setStatus] = useState({ type: "", message: "" });
 
+  /* ── AI Tutor state ── */
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatCourseId, setChatCourseId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+
   useEffect(() => {
     const session = getSession();
     if (!session?.access_token || session?.role !== "student") {
@@ -140,6 +151,33 @@ export default function StudentDashboard() {
     navigate("/login");
   };
 
+  /* ── AI Tutor functions ── */
+  const openTutor = (courseId) => {
+    setChatCourseId(courseId);
+    setChatMessages([]);
+    setChatOpen(true);
+  };
+
+  const sendTutorMessage = async () => {
+    if (!chatInput.trim() || !chatCourseId || chatLoading) return;
+    const question = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", content: question }]);
+    setChatLoading(true);
+    try {
+      const history = chatMessages.map((m) => ({ role: m.role, content: m.content }));
+      const resp = await api.post(`/student/courses/${chatCourseId}/ask`, {
+        question,
+        conversation_history: history,
+      });
+      setChatMessages((prev) => [...prev, { role: "assistant", content: resp.answer }]);
+    } catch (error) {
+      setChatMessages((prev) => [...prev, { role: "assistant", content: "❌ Error: " + (error?.data?.detail || error?.message || "No se pudo contactar al tutor.") }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   const displayName =
     profile?.profile_data?.first_name
       ? `${profile.profile_data.first_name} ${profile.profile_data.last_name || ""}`
@@ -162,6 +200,7 @@ export default function StudentDashboard() {
   ];
 
   return (
+    <>
     <DashboardLayout
       title="Panel del Estudiante"
       navSection="Principal"
@@ -334,14 +373,30 @@ export default function StudentDashboard() {
                           </div>
                         )}
 
-                        {/* Complete button */}
+                        {/* Complete button + AI Tutor button */}
                         {!opp.course_completed && opp.course_id && (
-                          <div className="mt-4">
+                          <div className="mt-4 flex flex-wrap items-center gap-2">
                             <button
                               onClick={() => completeCourse(opp)}
                               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98]"
                             >
                               <BookOpen className="h-4 w-4" /> Completar curso
+                            </button>
+                            <button
+                              onClick={() => openTutor(opp.course_id)}
+                              className="inline-flex items-center gap-2 rounded-lg border border-violet-300 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 px-4 py-2 text-xs font-semibold text-violet-700 dark:text-violet-300 transition-all hover:bg-violet-100 dark:hover:bg-violet-500/20 active:scale-[0.98]"
+                            >
+                              <Sparkles className="h-4 w-4" /> Pregunta al Tutor IA
+                            </button>
+                          </div>
+                        )}
+                        {opp.course_completed && opp.course_id && (
+                          <div className="mt-4">
+                            <button
+                              onClick={() => openTutor(opp.course_id)}
+                              className="inline-flex items-center gap-2 rounded-lg border border-violet-300 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 px-4 py-2 text-xs font-semibold text-violet-700 dark:text-violet-300 transition-all hover:bg-violet-100 dark:hover:bg-violet-500/20 active:scale-[0.98]"
+                            >
+                              <Sparkles className="h-4 w-4" /> Pregunta al Tutor IA
                             </button>
                           </div>
                         )}
@@ -605,5 +660,93 @@ export default function StudentDashboard() {
         </AnimatePresence>
       )}
     </DashboardLayout>
+
+    {/* ═══════ Floating AI Tutor Chat ═══════ */}
+    <AnimatePresence>
+      {chatOpen && (
+        <motion.div
+          key="ai-tutor-chat"
+          initial={{ opacity: 0, y: 30, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 30, scale: 0.9 }}
+          transition={{ duration: 0.25 }}
+          className="fixed bottom-6 right-6 z-50 flex w-96 max-w-[calc(100vw-2rem)] flex-col rounded-2xl border border-violet-200 dark:border-violet-500/20 bg-white dark:bg-zinc-900 shadow-2xl"
+        >
+          {/* Chat header */}
+          <div className="flex items-center justify-between rounded-t-2xl border-b border-gray-200 dark:border-white/[0.06] bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3">
+            <div className="flex items-center gap-2 text-white">
+              <Sparkles className="h-5 w-5" />
+              <span className="text-sm font-semibold">Tutor IA</span>
+            </div>
+            <button onClick={() => setChatOpen(false)} className="rounded-lg p-1 text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ maxHeight: "350px", minHeight: "200px" }}>
+            {chatMessages.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Sparkles className="h-8 w-8 text-violet-400 mb-3" />
+                <p className="text-sm text-gray-500 dark:text-zinc-400">¡Hola! Soy tu tutor IA.</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500 mt-1">Pregúntame cualquier duda sobre tu curso.</p>
+              </div>
+            )}
+            {chatMessages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] rounded-xl px-3.5 py-2.5 text-sm ${
+                  msg.role === "user"
+                    ? "bg-violet-600 text-white rounded-br-sm"
+                    : "bg-gray-100 dark:bg-white/[0.06] text-gray-800 dark:text-zinc-200 rounded-bl-sm"
+                }`}>
+                  <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+                </div>
+              </div>
+            ))}
+            {chatLoading && (
+              <div className="flex justify-start">
+                <div className="flex items-center gap-2 rounded-xl bg-gray-100 dark:bg-white/[0.06] px-4 py-3 text-sm text-gray-500 dark:text-zinc-400 rounded-bl-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Pensando…
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div className="border-t border-gray-200 dark:border-white/[0.06] px-4 py-3">
+            <div className="flex items-center gap-2">
+              <input
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendTutorMessage()}
+                placeholder="Escribe tu pregunta…"
+                disabled={chatLoading}
+                className="flex-1 rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-3 py-2 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-violet-400 dark:focus:border-violet-500/50 disabled:opacity-50"
+              />
+              <button
+                onClick={sendTutorMessage}
+                disabled={chatLoading || !chatInput.trim()}
+                className="rounded-lg bg-violet-600 p-2 text-white transition-all hover:bg-violet-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* ═══════ Floating Tutor button (when chat is closed) ═══════ */}
+    {!chatOpen && chatCourseId && (
+      <motion.button
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        onClick={() => setChatOpen(true)}
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-95"
+      >
+        <MessageCircle className="h-6 w-6" />
+      </motion.button>
+    )}
+    </>
   );
 }

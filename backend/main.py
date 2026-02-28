@@ -21,6 +21,7 @@ import database
 import auth
 import email_service
 import logging_config
+import ai_service
 
 import logging
 import time
@@ -248,6 +249,40 @@ class CourseCompletionOut(StrictModel):
 # ── Apply ──
 class ApplyIn(StrictModel):
     opportunity_id: int
+
+
+# ── AI schemas ──
+class AIGenerateCourseIn(StrictModel):
+    """Datos para generar un curso con IA."""
+    name: str = Field(min_length=3, max_length=255)
+    description: str = Field(default="", max_length=2000)
+    requirements: str = Field(default="", max_length=2000)
+    num_modules: int = Field(default=3, ge=1, le=10)
+    topics_per_module: int = Field(default=3, ge=1, le=10)
+
+
+class AITutorIn(StrictModel):
+    """Pregunta al tutor IA."""
+    question: str = Field(min_length=2, max_length=1000)
+    conversation_history: list[dict] = Field(default_factory=list)
+
+
+class AITutorOut(StrictModel):
+    answer: str
+    course_name: str
+
+
+class AIScoreIn(StrictModel):
+    """Solicitar scoring IA para un aplicante."""
+    application_id: int
+
+
+class AIScoreOut(StrictModel):
+    score: int
+    summary: str
+    strengths: list[str]
+    areas_to_improve: list[str]
+    recommendation: str
 
 
 # ── Metrics ──
@@ -682,6 +717,52 @@ def read_student_applications(
     return result
 
 
+# ── AI: Tutor para estudiantes ──
+
+@app.post("/student/courses/{course_id}/ask", response_model=AITutorOut)
+def ask_course_tutor(
+    course_id: int,
+    payload: AITutorIn,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.student)),
+    db: Session = Depends(database.get_db),
+):
+    """Pregunta al tutor IA sobre el curso."""
+    course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso no encontrado")
+
+    # Serializar módulos para contexto
+    modules_ctx = []
+    for m in course.modules:
+        modules_ctx.append({
+            "title": m.title,
+            "topics": [{"title": t.title, "content_url": t.content_url} for t in m.topics],
+        })
+
+    try:
+        answer = ai_service.ask_tutor(
+            question=payload.question,
+            course_name=course.name,
+            course_modules=modules_ctx,
+            conversation_history=payload.conversation_history,
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error en tutor IA: {e}")
+        raise HTTPException(status_code=500, detail=f"Error del tutor: {str(e)}")
+
+    _log_event(
+        db, "ai_tutor_query",
+        user_id=current_user.id,
+        course_id=course_id,
+        payload={"question_length": len(payload.question)},
+    )
+    db.commit()
+
+    return AITutorOut(answer=answer, course_name=course.name)
+
+
 # ══════════════════════════════════════════════════════════════════
 # COMPANY ROUTES
 # ══════════════════════════════════════════════════════════════════
@@ -799,6 +880,122 @@ def read_company_stats(
         "pending_review": pending,
         "total_applicants": total_applicants,
     }
+
+
+# ── AI: Scoring de aplicaciones ──
+
+@app.post("/admin/applications/{application_id}/score", response_model=AIScoreOut)
+def score_application_with_ai(
+    application_id: int,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    """Evalúa un aplicante con IA basándose en su perfil vs la oportunidad."""
+    application = db.query(models.Application).filter(models.Application.id == application_id).first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Aplicación no encontrada")
+
+    student = application.user
+    opportunity = application.opportunity
+
+    course_completed = False
+    course_score = None
+    if opportunity.course:
+        progress = db.query(models.UserProgress).filter(
+            models.UserProgress.user_id == student.id,
+            models.UserProgress.course_id == opportunity.course.id,
+        ).first()
+        if progress:
+            course_completed = bool(progress.is_completed)
+            course_score = progress.score
+
+    try:
+        result = ai_service.score_application(
+            student_profile=student.profile_data or {},
+            student_email=student.email,
+            opportunity_title=opportunity.title,
+            opportunity_description=opportunity.description,
+            opportunity_requirements=opportunity.requirements or "",
+            course_completed=course_completed,
+            course_score=course_score,
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error scoring con IA: {e}")
+        raise HTTPException(status_code=500, detail=f"Error de IA: {str(e)}")
+
+    _log_event(
+        db, "ai_scoring",
+        user_id=current_user.id,
+        opportunity_id=opportunity.id,
+        payload={"application_id": application_id, "score": result["score"]},
+    )
+    db.commit()
+
+    return AIScoreOut(**result)
+
+
+@app.post("/company/opportunities/{opportunity_id}/applicants/{application_id}/score", response_model=AIScoreOut)
+def company_score_applicant(
+    opportunity_id: int,
+    application_id: int,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.company)),
+    db: Session = Depends(database.get_db),
+):
+    """La empresa evalúa con IA a un aplicante de su oportunidad."""
+    opportunity = db.query(models.Opportunity).filter(
+        models.Opportunity.id == opportunity_id,
+        models.Opportunity.company_id == current_user.id,
+    ).first()
+    if not opportunity:
+        raise HTTPException(status_code=404, detail="Oportunidad no encontrada o no te pertenece.")
+
+    application = db.query(models.Application).filter(
+        models.Application.id == application_id,
+        models.Application.opportunity_id == opportunity_id,
+    ).first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Aplicación no encontrada.")
+
+    student = application.user
+
+    course_completed = False
+    course_score = None
+    if opportunity.course:
+        progress = db.query(models.UserProgress).filter(
+            models.UserProgress.user_id == student.id,
+            models.UserProgress.course_id == opportunity.course.id,
+        ).first()
+        if progress:
+            course_completed = bool(progress.is_completed)
+            course_score = progress.score
+
+    try:
+        result = ai_service.score_application(
+            student_profile=student.profile_data or {},
+            student_email=student.email,
+            opportunity_title=opportunity.title,
+            opportunity_description=opportunity.description,
+            opportunity_requirements=opportunity.requirements or "",
+            course_completed=course_completed,
+            course_score=course_score,
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error scoring con IA: {e}")
+        raise HTTPException(status_code=500, detail=f"Error de IA: {str(e)}")
+
+    _log_event(
+        db, "ai_scoring",
+        user_id=current_user.id,
+        opportunity_id=opportunity_id,
+        payload={"application_id": application_id, "score": result["score"]},
+    )
+    db.commit()
+
+    return AIScoreOut(**result)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -1023,6 +1220,90 @@ def delete_catalog_course(
     _log_event(db, "catalog_course_deleted", user_id=current_user.id, course_id=course.id)
     db.commit()
     return {"message": "Curso desactivado del catálogo."}
+
+
+# ── AI: Generar curso con IA ──
+
+@app.post("/admin/courses/generate", response_model=CatalogCourseOut, status_code=201)
+def generate_course_with_ai(
+    payload: AIGenerateCourseIn,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    """Genera un curso completo usando IA y lo guarda en el catálogo."""
+    try:
+        ai_result = ai_service.generate_course(
+            course_name=payload.name,
+            description=payload.description,
+            requirements=payload.requirements,
+            num_modules=payload.num_modules,
+            topics_per_module=payload.topics_per_module,
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error generando curso con IA: {e}")
+        raise HTTPException(status_code=500, detail=f"Error de IA: {str(e)}")
+
+    # Guardar el curso generado
+    course = models.Course(
+        name=ai_result.get("name", payload.name),
+        description=ai_result.get("description"),
+        opportunity_id=None,
+        is_active=True,
+        quiz_data={"questions": ai_result.get("quiz_questions", [])},
+    )
+    db.add(course)
+    db.flush()
+
+    for mod_data in ai_result.get("modules", []):
+        new_mod = models.CourseModule(
+            course_id=course.id,
+            title=mod_data["title"],
+            order=mod_data.get("order", 0),
+        )
+        db.add(new_mod)
+        db.flush()
+        for topic_data in mod_data.get("topics", []):
+            db.add(models.CourseTopic(
+                module_id=new_mod.id,
+                title=topic_data["title"],
+                content_url=topic_data.get("content_url"),
+                order=topic_data.get("order", 0),
+            ))
+    db.flush()
+
+    _log_event(
+        db, "catalog_course_generated_ai",
+        user_id=current_user.id,
+        course_id=course.id,
+        payload={"name": payload.name, "modules": len(ai_result.get("modules", []))},
+    )
+    db.commit()
+    db.refresh(course)
+    return _serialize_catalog_course(course)
+
+
+@app.post("/admin/courses/generate/preview")
+def preview_ai_course(
+    payload: AIGenerateCourseIn,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+):
+    """Genera un curso con IA sin guardarlo, para previsualización."""
+    try:
+        ai_result = ai_service.generate_course(
+            course_name=payload.name,
+            description=payload.description,
+            requirements=payload.requirements,
+            num_modules=payload.num_modules,
+            topics_per_module=payload.topics_per_module,
+        )
+        return ai_result
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error generando preview con IA: {e}")
+        raise HTTPException(status_code=500, detail=f"Error de IA: {str(e)}")
 
 
 @app.get("/admin/metrics/summary", response_model=MetricsSummaryOut)

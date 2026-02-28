@@ -7,11 +7,13 @@ import {
   ChevronRight,
   Clock3,
   GraduationCap,
+  Loader2,
   Pencil,
   Plus,
   RefreshCcw,
   Settings,
   ShieldCheck,
+  Sparkles,
   Trash2,
   TrendingUp,
   Users,
@@ -165,9 +167,15 @@ export default function AdminDashboard() {
   const [savingCourse, setSavingCourse] = useState(false);
   const [loadingCourse, setLoadingCourse] = useState(false);
 
+  /* ── Modal de generación con IA ── */
+  const [aiModal, setAiModal] = useState(false);
+  const [aiForm, setAiForm] = useState({ name: "", description: "", requirements: "", num_modules: 3, topics_per_module: 3 });
+  const [aiGenerating, setAiGenerating] = useState(false);
+
   const loadData = async () => {
     try {
       setLoading(true);
+      setStatus({ type: "", message: "" });
       const [pendingData, metricsData, usersData, coursesData] = await Promise.all([
         api.get("/admin/opportunities/pending"),
         api.get("/admin/metrics/summary"),
@@ -197,11 +205,12 @@ export default function AdminDashboard() {
 
   const confirmPublish = async () => {
     if (!selectedCatalogId) {
-      setStatus({ type: "error", message: "Selecciona un curso del cat\u00e1logo." });
+      setStatus({ type: "error", message: "Selecciona un curso del catálogo." });
       return;
     }
     try {
       setPublishing(true);
+      setStatus({ type: "", message: "" });
       await api.patch(`/admin/opportunities/${publishModal.id}/publish`, {
         catalog_course_id: Number(selectedCatalogId),
       });
@@ -337,7 +346,34 @@ export default function AdminDashboard() {
       setStatus({ type: "error", message: error.message || "Error eliminando curso." });
     }
   };
-
+  /* ── Generar curso con IA ── */
+  const generateCourseWithAI = async () => {
+    if (!aiForm.name.trim()) {
+      setStatus({ type: "error", message: "Escribe el nombre del curso para que la IA lo genere." });
+      return;
+    }
+    try {
+      setAiGenerating(true);
+      setStatus({ type: "", message: "" });
+      await api.post("/admin/courses/generate", {
+        name: aiForm.name.trim(),
+        description: aiForm.description.trim(),
+        requirements: aiForm.requirements.trim(),
+        num_modules: aiForm.num_modules,
+        topics_per_module: aiForm.topics_per_module,
+      });
+      setAiModal(false);
+      setAiForm({ name: "", description: "", requirements: "", num_modules: 3, topics_per_module: 3 });
+      const coursesData = await api.get("/admin/courses");
+      setCatalogCourses(Array.isArray(coursesData) ? coursesData : []);
+      setStatus({ type: "success", message: "✨ Curso generado con IA y guardado en el catálogo." });
+    } catch (error) {
+      const msg = error?.data?.detail || error?.message || "Error generando curso con IA.";
+      setStatus({ type: "error", message: String(msg) });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
   const logout = () => {
     clearSession();
     navigate("/login");
@@ -451,12 +487,20 @@ export default function AdminDashboard() {
                     Gestiona los cursos que se asignan al aprobar oportunidades.
                   </p>
                 </div>
-                <button
-                  onClick={openCreateCourse}
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98]"
-                >
-                  <Plus className="h-4 w-4" /> Añadir Nuevo Curso
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setAiModal(true)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-violet-300 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 px-4 py-2.5 text-xs font-semibold text-violet-700 dark:text-violet-300 shadow-sm transition-all hover:bg-violet-100 dark:hover:bg-violet-500/20 active:scale-[0.98]"
+                  >
+                    <Sparkles className="h-4 w-4" /> Generar con IA
+                  </button>
+                  <button
+                    onClick={openCreateCourse}
+                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98]"
+                  >
+                    <Plus className="h-4 w-4" /> Añadir Manual
+                  </button>
+                </div>
               </div>
 
               {catalogCourses.length === 0 ? (
@@ -971,6 +1015,148 @@ export default function AdminDashboard() {
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     {savingCourse ? "Guardando…" : courseModal.mode === "create" ? "Crear curso" : "Guardar cambios"}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════ Modal: Generar Curso con IA ═══════ */}
+      <AnimatePresence>
+        {aiModal && (
+          <motion.div
+            key="ai-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => !aiGenerating && setAiModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg rounded-2xl border border-violet-200 dark:border-violet-500/20 bg-white dark:bg-zinc-900 shadow-2xl"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-500/15">
+                    <Sparkles className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100">Generar Curso con IA</h3>
+                </div>
+                <button
+                  onClick={() => !aiGenerating && setAiModal(false)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4 px-6 pt-5 pb-6">
+                {aiGenerating ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="relative">
+                      <Loader2 className="h-10 w-10 animate-spin text-violet-500" />
+                      <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-violet-400 animate-pulse" />
+                    </div>
+                    <p className="mt-4 text-sm font-medium text-gray-700 dark:text-zinc-300">La IA está generando tu curso…</p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-zinc-500">Esto puede tardar 10-20 segundos</p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                        Nombre del curso <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        value={aiForm.name}
+                        onChange={(e) => setAiForm((f) => ({ ...f, name: e.target.value }))}
+                        placeholder="Ej: Desarrollo Web con React y Node.js"
+                        className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-violet-400 dark:focus:border-violet-500/50 focus:ring-1 focus:ring-violet-200 dark:focus:ring-violet-500/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                        Descripción <span className="text-xs font-normal text-gray-400">(opcional)</span>
+                      </label>
+                      <textarea
+                        value={aiForm.description}
+                        onChange={(e) => setAiForm((f) => ({ ...f, description: e.target.value }))}
+                        rows={2}
+                        placeholder="Describe qué debe cubrir el curso…"
+                        className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-violet-400 dark:focus:border-violet-500/50 focus:ring-1 focus:ring-violet-200 dark:focus:ring-violet-500/30 resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                        Requisitos del puesto <span className="text-xs font-normal text-gray-400">(opcional — mejora la relevancia)</span>
+                      </label>
+                      <textarea
+                        value={aiForm.requirements}
+                        onChange={(e) => setAiForm((f) => ({ ...f, requirements: e.target.value }))}
+                        rows={2}
+                        placeholder="Ej: Python, SQL, Git, trabajo en equipo…"
+                        className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-violet-400 dark:focus:border-violet-500/50 focus:ring-1 focus:ring-violet-200 dark:focus:ring-violet-500/30 resize-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-gray-700 dark:text-zinc-300">Módulos</label>
+                        <select
+                          value={aiForm.num_modules}
+                          onChange={(e) => setAiForm((f) => ({ ...f, num_modules: Number(e.target.value) }))}
+                          className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-3 py-2 text-sm text-gray-900 dark:text-zinc-100"
+                        >
+                          {[2, 3, 4, 5, 6].map((n) => (
+                            <option key={n} value={n}>{n} módulos</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs font-medium text-gray-700 dark:text-zinc-300">Temas por módulo</label>
+                        <select
+                          value={aiForm.topics_per_module}
+                          onChange={(e) => setAiForm((f) => ({ ...f, topics_per_module: Number(e.target.value) }))}
+                          className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-3 py-2 text-sm text-gray-900 dark:text-zinc-100"
+                        >
+                          {[2, 3, 4, 5].map((n) => (
+                            <option key={n} value={n}>{n} temas</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-violet-200 dark:border-violet-500/20 bg-violet-50 dark:bg-violet-500/5 p-3">
+                      <p className="text-xs text-violet-700 dark:text-violet-400">
+                        <Sparkles className="inline h-3.5 w-3.5 mr-1" />
+                        La IA generará: <strong>{aiForm.num_modules} módulos</strong> × <strong>{aiForm.topics_per_module} temas</strong> = <strong>{aiForm.num_modules * aiForm.topics_per_module} temas</strong> con recursos educativos reales + <strong>5 preguntas de quiz</strong>.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Actions */}
+              {!aiGenerating && (
+                <div className="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                  <button
+                    onClick={() => setAiModal(false)}
+                    className="rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-gray-700 dark:text-zinc-300 transition-all hover:bg-gray-200 dark:hover:bg-white/[0.06]"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={generateCourseWithAI}
+                    disabled={!aiForm.name.trim()}
+                    className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:from-violet-500 hover:to-purple-500 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Sparkles className="h-4 w-4" /> Generar con IA
                   </button>
                 </div>
               )}

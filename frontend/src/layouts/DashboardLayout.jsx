@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { LogOut, Menu, Sparkles, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /* ─── Drawer animation ─── */
 const drawerVariants = {
@@ -24,6 +24,14 @@ export default function DashboardLayout({
   children,
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Auto-dismiss status toast after 6 seconds
+  useEffect(() => {
+    if (statusToast?.message && onDismissStatus) {
+      const timer = setTimeout(onDismissStatus, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [statusToast?.message, statusToast?.type]);
 
   const initials = userName
     ? userName.split(" ").filter(Boolean).map((w) => w[0]).join("").toUpperCase().slice(0, 2)

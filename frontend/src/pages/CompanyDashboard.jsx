@@ -6,9 +6,12 @@ import {
   ChevronLeft,
   Clock3,
   LayoutDashboard,
+  Loader2,
   PlusCircle,
   Settings,
+  Sparkles,
   Users,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -92,9 +95,15 @@ export default function CompanyDashboard() {
   const [applicants, setApplicants] = useState([]);
   const [loadingApplicants, setLoadingApplicants] = useState(false);
 
+  /* ── AI Scoring state ── */
+  const [scoringId, setScoringId] = useState(null);
+  const [scoreResult, setScoreResult] = useState(null);
+  const [scoreModal, setScoreModal] = useState(false);
+
   const loadData = async () => {
     try {
       setLoading(true);
+      setStatus({ type: "", message: "" });
       const [profileData, oppsData, statsData] = await Promise.all([
         api.get("/auth/me"),
         api.get("/company/opportunities"),
@@ -146,6 +155,24 @@ export default function CompanyDashboard() {
       setApplicants([]);
     } finally {
       setLoadingApplicants(false);
+    }
+  };
+
+  /* ── AI Scoring ── */
+  const scoreApplicant = async (applicationId) => {
+    setScoringId(applicationId);
+    setScoreResult(null);
+    try {
+      const result = await api.post(
+        `/company/opportunities/${selectedOpp.id}/applicants/${applicationId}/score`
+      );
+      setScoreResult(result);
+      setScoreModal(true);
+    } catch (error) {
+      const msg = error?.data?.detail || error?.message || "Error al evaluar con IA.";
+      setStatus({ type: "error", message: String(msg) });
+    } finally {
+      setScoringId(null);
     }
   };
 
@@ -402,6 +429,7 @@ export default function CompanyDashboard() {
                             <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Postulante</th>
                             <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Curso</th>
                             <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Fecha</th>
+                            <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">IA</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-white/[0.04]">
@@ -429,6 +457,19 @@ export default function CompanyDashboard() {
                               </td>
                               <td className="px-5 py-4 text-gray-500 dark:text-zinc-500">
                                 {a.applied_at ? new Date(a.applied_at).toLocaleDateString("es-PE") : "—"}
+                              </td>
+                              <td className="px-5 py-4 text-right">
+                                <button
+                                  onClick={() => scoreApplicant(a.application_id)}
+                                  disabled={scoringId === a.application_id}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-violet-300 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-700 dark:text-violet-300 transition-all hover:bg-violet-100 dark:hover:bg-violet-500/20 disabled:opacity-50"
+                                >
+                                  {scoringId === a.application_id ? (
+                                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Evaluando…</>
+                                  ) : (
+                                    <><Sparkles className="h-3.5 w-3.5" /> Evaluar</>
+                                  )}
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -530,6 +571,107 @@ export default function CompanyDashboard() {
           )}
         </AnimatePresence>
       )}
+      {/* ═══════ Modal: Resultado de Scoring IA ═══════ */}
+      <AnimatePresence>
+        {scoreModal && scoreResult && (
+          <motion.div
+            key="score-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setScoreModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl border border-violet-200 dark:border-violet-500/20 bg-white dark:bg-zinc-900 shadow-2xl"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-violet-500" />
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100">Evaluación IA</h3>
+                </div>
+                <button onClick={() => setScoreModal(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Score */}
+              <div className="px-6 py-6 space-y-4">
+                {/* Score circle */}
+                <div className="flex flex-col items-center">
+                  <div className={`flex h-20 w-20 items-center justify-center rounded-full border-4 ${
+                    scoreResult.score >= 70
+                      ? "border-emerald-500 text-emerald-600 dark:text-emerald-400"
+                      : scoreResult.score >= 40
+                        ? "border-amber-500 text-amber-600 dark:text-amber-400"
+                        : "border-rose-500 text-rose-600 dark:text-rose-400"
+                  }`}>
+                    <span className="text-2xl font-bold">{scoreResult.score}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">Compatibilidad</p>
+                </div>
+
+                {/* Summary */}
+                <div className="rounded-lg border border-gray-200 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.02] p-3">
+                  <p className="text-sm text-gray-700 dark:text-zinc-300">{scoreResult.summary}</p>
+                </div>
+
+                {/* Strengths */}
+                {scoreResult.strengths?.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase text-emerald-600 dark:text-emerald-400">Fortalezas</p>
+                    <ul className="space-y-1">
+                      {scoreResult.strengths.map((s, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-zinc-400">
+                          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Areas to improve */}
+                {scoreResult.areas_to_improve?.length > 0 && (
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase text-amber-600 dark:text-amber-400">Áreas de mejora</p>
+                    <ul className="space-y-1">
+                      {scoreResult.areas_to_improve.map((a, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-zinc-400">
+                          <span className="mt-0.5 h-3.5 w-3.5 shrink-0 text-center text-amber-500">•</span>
+                          {a}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Recommendation */}
+                <div className="rounded-lg border border-violet-200 dark:border-violet-500/20 bg-violet-50 dark:bg-violet-500/5 p-3">
+                  <p className="text-xs font-semibold text-violet-700 dark:text-violet-300 mb-1">Recomendación IA</p>
+                  <p className="text-sm text-violet-600 dark:text-violet-400">{scoreResult.recommendation}</p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end border-t border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                <button
+                  onClick={() => setScoreModal(false)}
+                  className="rounded-lg bg-violet-600 px-5 py-2.5 text-xs font-semibold text-white transition-all hover:bg-violet-500 active:scale-[0.98]"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }
