@@ -119,7 +119,7 @@ function ModuleAccordion({ mod, mi, updateModule, removeModule, addTopic, remove
                   className="w-full bg-transparent text-xs font-medium text-gray-700 dark:text-zinc-300 outline-none placeholder:text-gray-400 dark:placeholder:text-zinc-600"
                 />
                 <input
-                  value={topic.content_url}
+                  value={topic.content_url || ""}
                   onChange={(e) => updateTopic(mi, ti, "content_url", e.target.value)}
                   placeholder="https://recurso.com/video"
                   className="w-full bg-transparent text-xs text-gray-500 dark:text-zinc-400 outline-none placeholder:text-gray-400 dark:placeholder:text-zinc-600"
@@ -231,7 +231,7 @@ export default function AdminDashboard() {
         description: full.description || "",
         modules: (full.modules || []).map((m) => ({
           title: m.title, order: m.order,
-          topics: (m.topics || []).map((t) => ({ title: t.title, content_url: t.content_url, order: t.order })),
+          topics: (m.topics || []).map((t) => ({ title: t.title, content_url: t.content_url || "", order: t.order })),
         })),
       });
     } catch {
@@ -295,7 +295,7 @@ export default function AdminDashboard() {
           order: mi,
           topics: m.topics.map((t, ti) => ({
             title: t.title.trim(),
-            content_url: t.content_url.trim() || null,
+            content_url: (t.content_url || "").trim() || null,
             order: ti,
           })),
         })),
@@ -311,11 +311,17 @@ export default function AdminDashboard() {
       const coursesData = await api.get("/admin/courses");
       setCatalogCourses(Array.isArray(coursesData) ? coursesData : []);
     } catch (error) {
-      const msg = error?.data?.detail
-        || (Array.isArray(error?.data) ? error.data.map((e) => e.msg).join("; ") : null)
-        || error.message
-        || "Error guardando curso.";
-      setStatus({ type: "error", message: msg });
+      let msg = "Error guardando curso.";
+      if (error?.data?.detail) {
+        msg = typeof error.data.detail === "string"
+          ? error.data.detail
+          : Array.isArray(error.data.detail)
+            ? error.data.detail.map((e) => e.msg || JSON.stringify(e)).join("; ")
+            : JSON.stringify(error.data.detail);
+      } else if (error?.message) {
+        msg = error.message;
+      }
+      setStatus({ type: "error", message: String(msg) });
     } finally {
       setSavingCourse(false);
     }
