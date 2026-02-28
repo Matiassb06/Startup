@@ -36,7 +36,7 @@ export function AdminDashboard() {
       ]);
       setPending(Array.isArray(pendingData) ? pendingData : []);
       setMetrics(metricsData);
-      setUsers(Array.isArray(usersData) ? usersData : []);
+      setUsers(Array.isArray(usersData?.items) ? usersData.items : Array.isArray(usersData) ? usersData : []);
     } catch (error) {
       setStatus({ type: "error", message: error.message || "Error cargando datos." });
     } finally {

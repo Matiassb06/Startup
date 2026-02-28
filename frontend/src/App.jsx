@@ -10,6 +10,7 @@ import { CompanyDashboard } from "./pages/CompanyDashboard";
 import { LandingPage } from "./pages/LandingPage";
 import { Methodology } from "./pages/Methodology";
 import { StudentDashboard } from "./pages/StudentDashboard";
+import { VerifyEmail } from "./pages/VerifyEmail";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
 
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/register" element={<AuthPage mode="register" />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
       <Route
         path="/student/dashboard"

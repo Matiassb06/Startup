@@ -37,6 +37,8 @@ class User(Base):
     password_hash = Column(Text, nullable=False)
     role = Column(SQLEnum(UserRole, name="user_role", native_enum=True), nullable=False)
     profile_data = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    email_verified = Column(Boolean, nullable=False, server_default=text("false"))
+    verification_token = Column(String(255), nullable=True)
 
     company_opportunities = relationship(
         "Opportunity",

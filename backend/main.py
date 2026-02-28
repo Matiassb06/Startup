@@ -3,6 +3,9 @@ Train-to-Hire API — main.py
 FastAPI backend con JWT auth, sistema de roles y flujo core de reclutamiento.
 """
 
+import math
+import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -16,13 +19,46 @@ from fastapi.middleware.cors import CORSMiddleware
 import models
 import database
 import auth
+import email_service
+import logging_config
+
+import logging
+import time
+from starlette.requests import Request
+from starlette.responses import Response
+
+# ── Inicializar logging estructurado ──
+logging_config.setup_logging()
+logger = logging.getLogger("traintohire.api")
 
 app = FastAPI(title="Train-To-Hire API", version="2.0.0")
 
+
+# ── Middleware de logging de requests ──
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    start = time.perf_counter()
+    response: Response = await call_next(request)
+    duration_ms = round((time.perf_counter() - start) * 1000, 2)
+
+    logger.info(
+        f"{request.method} {request.url.path} → {response.status_code} ({duration_ms}ms)",
+        extra={
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": duration_ms,
+        },
+    )
+    return response
+
 # ── CORS ───────────────────────────────────────────────────────────
+_cors_raw = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+_cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -215,6 +251,27 @@ class StudentApplicationOut(StrictModel):
     applied_at: str
 
 
+# ── Paginación genérica ──
+class PaginationParams:
+    """Parámetros de paginación reutilizables como dependency."""
+    def __init__(
+        self,
+        page: int = Query(default=1, ge=1, description="Número de página (1-indexed)"),
+        page_size: int = Query(default=20, ge=1, le=100, description="Elementos por página"),
+    ):
+        self.page = page
+        self.page_size = page_size
+        self.offset = (page - 1) * page_size
+
+class PaginatedOut(BaseModel):
+    """Wrapper genérico para respuestas paginadas."""
+    items: list
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 # ══════════════════════════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════════════════════════
@@ -274,15 +331,21 @@ def register(payload: RegisterIn, db: Session = Depends(database.get_db)):
         raise HTTPException(status_code=409, detail="Ya existe una cuenta con ese correo.")
 
     hashed = auth.hash_password(payload.password)
+    verification_token = secrets.token_urlsafe(32)
     new_user = models.User(
         email=payload.email,
         password_hash=hashed,
         role=payload.role,
         profile_data=payload.profile_data,
+        email_verified=False,
+        verification_token=verification_token,
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    # Enviar correo de verificación (no bloquea el registro si falla)
+    email_service.send_verification_email(new_user.email, verification_token)
 
     _log_event(db, "user_registered", user_id=new_user.id, payload={"role": new_user.role.value})
     db.commit()
@@ -343,6 +406,33 @@ def update_current_profile(
         role=current_user.role.value,
         profile_data=current_user.profile_data or {},
     )
+
+
+@app.get("/auth/verify-email")
+def verify_email(token: str = Query(..., min_length=10), db: Session = Depends(database.get_db)):
+    """Verifica el correo del usuario usando el token enviado por email."""
+    user = db.query(models.User).filter(models.User.verification_token == token).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Token de verificación inválido o ya utilizado.")
+
+    user.email_verified = True
+    user.verification_token = None
+    _log_event(db, "email_verified", user_id=user.id)
+    db.commit()
+    return {"message": "Correo verificado exitosamente. Ya puedes usar la plataforma."}
+
+
+@app.post("/auth/resend-verification")
+def resend_verification(current_user: models.User = Depends(auth.get_current_user), db: Session = Depends(database.get_db)):
+    """Reenvía el correo de verificación al usuario autenticado."""
+    if current_user.email_verified:
+        return {"message": "Tu correo ya está verificado."}
+
+    new_token = secrets.token_urlsafe(32)
+    current_user.verification_token = new_token
+    db.commit()
+    email_service.send_verification_email(current_user.email, new_token)
+    return {"message": "Correo de verificación reenviado."}
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -760,44 +850,66 @@ def read_metrics_summary(
     )
 
 
-@app.get("/admin/users", response_model=list[AdminUserOut])
+@app.get("/admin/users")
 def read_all_users(
     role: Optional[str] = Query(default=None),
+    pagination: PaginationParams = Depends(),
     current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
     db: Session = Depends(database.get_db),
 ):
     query = db.query(models.User)
     if role:
         query = query.filter(models.User.role == role)
-    users = query.order_by(models.User.id.desc()).all()
-    return [
-        AdminUserOut(id=u.id, email=u.email, role=u.role.value, profile_data=u.profile_data or {})
-        for u in users
-    ]
+    total = query.count()
+    users = query.order_by(models.User.id.desc()).offset(pagination.offset).limit(pagination.page_size).all()
+    return PaginatedOut(
+        items=[AdminUserOut(id=u.id, email=u.email, role=u.role.value, profile_data=u.profile_data or {}).model_dump() for u in users],
+        total=total,
+        page=pagination.page,
+        page_size=pagination.page_size,
+        total_pages=math.ceil(total / pagination.page_size) if total else 1,
+    )
 
 
-@app.get("/admin/opportunities/all", response_model=list[OpportunityOut])
+@app.get("/admin/opportunities/all")
 def read_all_opportunities(
     status_filter: Optional[str] = Query(default=None, alias="status"),
+    pagination: PaginationParams = Depends(),
     current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
     db: Session = Depends(database.get_db),
 ):
     query = db.query(models.Opportunity)
     if status_filter:
         query = query.filter(models.Opportunity.status == status_filter)
-    return query.order_by(models.Opportunity.id.desc()).all()
+    total = query.count()
+    items = query.order_by(models.Opportunity.id.desc()).offset(pagination.offset).limit(pagination.page_size).all()
+    return PaginatedOut(
+        items=[OpportunityOut.model_validate(o, from_attributes=True).model_dump() for o in items],
+        total=total,
+        page=pagination.page,
+        page_size=pagination.page_size,
+        total_pages=math.ceil(total / pagination.page_size) if total else 1,
+    )
 
 
 # ══════════════════════════════════════════════════════════════════
 # PUBLIC ENDPOINTS (sin auth)
 # ══════════════════════════════════════════════════════════════════
 
-@app.get("/opportunities/", response_model=list[OpportunityOut])
-def read_public_opportunities(db: Session = Depends(database.get_db)):
-    return (
-        db.query(models.Opportunity)
-        .filter(models.Opportunity.status == models.OpportunityStatus.published)
-        .all()
+@app.get("/opportunities/")
+def read_public_opportunities(
+    pagination: PaginationParams = Depends(),
+    db: Session = Depends(database.get_db),
+):
+    query = db.query(models.Opportunity).filter(models.Opportunity.status == models.OpportunityStatus.published)
+    total = query.count()
+    items = query.order_by(models.Opportunity.id.desc()).offset(pagination.offset).limit(pagination.page_size).all()
+    return PaginatedOut(
+        items=[OpportunityOut.model_validate(o, from_attributes=True).model_dump() for o in items],
+        total=total,
+        page=pagination.page,
+        page_size=pagination.page_size,
+        total_pages=math.ceil(total / pagination.page_size) if total else 1,
     )
 
 
