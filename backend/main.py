@@ -167,22 +167,53 @@ class AdminCourseUpsertIn(StrictModel):
 
 
 class PublishWithCourseIn(StrictModel):
-    """Datos obligatorios del curso al publicar una oportunidad."""
-    course_name: str = Field(min_length=3, max_length=255)
-    course_url: str
+    """Al publicar se selecciona un curso del catálogo."""
+    catalog_course_id: int
 
-    @field_validator("course_url")
+
+class CatalogCourseCreateIn(StrictModel):
+    """Crear un curso en el catálogo (sin oportunidad asociada)."""
+    name: str = Field(min_length=3, max_length=255)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    content_url: str
+
+    @field_validator("content_url")
     @classmethod
-    def validate_course_url(cls, value: str) -> str:
+    def validate_content_url(cls, value: str) -> str:
         normalized = value.strip()
         if not (normalized.startswith("http://") or normalized.startswith("https://")):
-            raise ValueError("course_url debe iniciar con http:// o https://")
+            raise ValueError("content_url debe iniciar con http:// o https://")
         return normalized
+
+
+class CatalogCourseUpdateIn(StrictModel):
+    """Editar un curso del catálogo."""
+    name: Optional[str] = Field(default=None, min_length=3, max_length=255)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    content_url: Optional[str] = None
+
+    @field_validator("content_url")
+    @classmethod
+    def validate_content_url(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        normalized = value.strip()
+        if not (normalized.startswith("http://") or normalized.startswith("https://")):
+            raise ValueError("content_url debe iniciar con http:// o https://")
+        return normalized
+
+
+class CatalogCourseOut(StrictModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    content_url: str
+    is_active: bool
 
 
 class CourseOut(StrictModel):
     id: int
-    opportunity_id: int
+    opportunity_id: Optional[int] = None
     name: str
     content_url: str
     quiz_data: dict
@@ -782,26 +813,37 @@ def publish_opportunity(
     if opportunity.status == models.OpportunityStatus.published:
         return opportunity
 
-    # Crear o actualizar el curso obligatorio
-    course = db.query(models.Course).filter(models.Course.opportunity_id == opportunity_id).first()
-    if not course:
-        course = models.Course(
+    # Buscar curso del catálogo
+    catalog_course = db.query(models.Course).filter(
+        models.Course.id == payload.catalog_course_id,
+        models.Course.opportunity_id.is_(None),
+        models.Course.is_active.is_(True),
+    ).first()
+    if not catalog_course:
+        raise HTTPException(status_code=404, detail="Curso del catálogo no encontrado o no disponible.")
+
+    # Crear copia del curso vinculada a la oportunidad
+    linked_course = db.query(models.Course).filter(models.Course.opportunity_id == opportunity_id).first()
+    if not linked_course:
+        linked_course = models.Course(
             opportunity_id=opportunity_id,
-            name=payload.course_name,
-            content_url=payload.course_url,
+            name=catalog_course.name,
+            description=catalog_course.description,
+            content_url=catalog_course.content_url,
         )
-        db.add(course)
+        db.add(linked_course)
         db.flush()
     else:
-        course.name = payload.course_name
-        course.content_url = payload.course_url
+        linked_course.name = catalog_course.name
+        linked_course.description = catalog_course.description
+        linked_course.content_url = catalog_course.content_url
 
     _log_event(
-        db, "course_upserted",
+        db, "course_assigned_from_catalog",
         user_id=current_user.id,
         opportunity_id=opportunity_id,
-        course_id=course.id,
-        payload={"course_name": payload.course_name, "content_url": payload.course_url},
+        course_id=linked_course.id,
+        payload={"catalog_course_id": catalog_course.id, "course_name": catalog_course.name},
     )
 
     opportunity.status = models.OpportunityStatus.published
@@ -809,6 +851,101 @@ def publish_opportunity(
     db.commit()
     db.refresh(opportunity)
     return opportunity
+
+
+# ── Course Catalog CRUD ──
+
+@app.get("/admin/courses", response_model=list[CatalogCourseOut])
+def list_catalog_courses(
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    """Lista cursos del catálogo (sin oportunidad vinculada, activos)."""
+    courses = (
+        db.query(models.Course)
+        .filter(models.Course.opportunity_id.is_(None), models.Course.is_active.is_(True))
+        .order_by(models.Course.id.desc())
+        .all()
+    )
+    return [
+        CatalogCourseOut(
+            id=c.id, name=c.name, description=c.description,
+            content_url=c.content_url, is_active=c.is_active,
+        )
+        for c in courses
+    ]
+
+
+@app.post("/admin/courses", response_model=CatalogCourseOut, status_code=201)
+def create_catalog_course(
+    payload: CatalogCourseCreateIn,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    """Crea un curso en el catálogo (sin asociar a oportunidad)."""
+    course = models.Course(
+        name=payload.name,
+        description=payload.description,
+        content_url=payload.content_url,
+        opportunity_id=None,
+        is_active=True,
+    )
+    db.add(course)
+    _log_event(db, "catalog_course_created", user_id=current_user.id, payload={"name": payload.name})
+    db.commit()
+    db.refresh(course)
+    return CatalogCourseOut(
+        id=course.id, name=course.name, description=course.description,
+        content_url=course.content_url, is_active=course.is_active,
+    )
+
+
+@app.patch("/admin/courses/{course_id}", response_model=CatalogCourseOut)
+def update_catalog_course(
+    course_id: int,
+    payload: CatalogCourseUpdateIn,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    """Edita un curso del catálogo."""
+    course = db.query(models.Course).filter(
+        models.Course.id == course_id,
+        models.Course.opportunity_id.is_(None),
+    ).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso del catálogo no encontrado.")
+    if payload.name is not None:
+        course.name = payload.name
+    if payload.description is not None:
+        course.description = payload.description
+    if payload.content_url is not None:
+        course.content_url = payload.content_url
+    _log_event(db, "catalog_course_updated", user_id=current_user.id, course_id=course.id)
+    db.commit()
+    db.refresh(course)
+    return CatalogCourseOut(
+        id=course.id, name=course.name, description=course.description,
+        content_url=course.content_url, is_active=course.is_active,
+    )
+
+
+@app.delete("/admin/courses/{course_id}")
+def delete_catalog_course(
+    course_id: int,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    """Desactiva (soft-delete) un curso del catálogo."""
+    course = db.query(models.Course).filter(
+        models.Course.id == course_id,
+        models.Course.opportunity_id.is_(None),
+    ).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso del catálogo no encontrado.")
+    course.is_active = False
+    _log_event(db, "catalog_course_deleted", user_id=current_user.id, course_id=course.id)
+    db.commit()
+    return {"message": "Curso desactivado del catálogo."}
 
 
 @app.patch("/admin/opportunities/{opportunity_id}/course", response_model=CourseOut)

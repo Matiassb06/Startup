@@ -4,9 +4,13 @@ import {
   BookCheck,
   CheckCircle2,
   Clock3,
+  GraduationCap,
+  Pencil,
+  Plus,
   RefreshCcw,
   Settings,
   ShieldCheck,
+  Trash2,
   TrendingUp,
   Users,
   X,
@@ -83,29 +87,36 @@ export default function AdminDashboard() {
   const [pending, setPending] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [users, setUsers] = useState([]);
+  const [catalogCourses, setCatalogCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [activeTab, setActiveTab] = useState("pending");
   const [userFilter, setUserFilter] = useState("");
 
-  /* ── Modal de publicación con curso obligatorio ── */
-  const [publishModal, setPublishModal] = useState(null); // opp object or null
-  const [courseName, setCourseName] = useState("");
-  const [courseUrl, setCourseUrl] = useState("");
+  /* ── Modal de publicación (dropdown del catálogo) ── */
+  const [publishModal, setPublishModal] = useState(null);
+  const [selectedCatalogId, setSelectedCatalogId] = useState("");
   const [publishing, setPublishing] = useState(false);
+
+  /* ── Modal de crear/editar curso del catálogo ── */
+  const [courseModal, setCourseModal] = useState(null); // null | { mode: "create" } | { mode: "edit", course: {...} }
+  const [courseForm, setCourseForm] = useState({ name: "", description: "", content_url: "" });
+  const [savingCourse, setSavingCourse] = useState(false);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [pendingData, metricsData, usersData] = await Promise.all([
+      const [pendingData, metricsData, usersData, coursesData] = await Promise.all([
         api.get("/admin/opportunities/pending"),
         api.get("/admin/metrics/summary"),
         api.get("/admin/users"),
+        api.get("/admin/courses"),
       ]);
       setPending(Array.isArray(pendingData) ? pendingData : []);
       setMetrics(metricsData);
       const usersList = usersData?.items ?? usersData;
       setUsers(Array.isArray(usersList) ? usersList : []);
+      setCatalogCourses(Array.isArray(coursesData) ? coursesData : []);
     } catch (error) {
       setStatus({ type: "error", message: error.message || "Error cargando datos." });
     } finally {
@@ -119,20 +130,18 @@ export default function AdminDashboard() {
 
   const openPublishModal = (opp) => {
     setPublishModal(opp);
-    setCourseName("");
-    setCourseUrl("");
+    setSelectedCatalogId("");
   };
 
   const confirmPublish = async () => {
-    if (!courseName.trim() || !courseUrl.trim()) {
-      setStatus({ type: "error", message: "Debes completar nombre y URL del curso." });
+    if (!selectedCatalogId) {
+      setStatus({ type: "error", message: "Selecciona un curso del cat\u00e1logo." });
       return;
     }
     try {
       setPublishing(true);
       await api.patch(`/admin/opportunities/${publishModal.id}/publish`, {
-        course_name: courseName.trim(),
-        course_url: courseUrl.trim(),
+        catalog_course_id: Number(selectedCatalogId),
       });
       setPublishModal(null);
       await loadData();
@@ -141,6 +150,60 @@ export default function AdminDashboard() {
       setStatus({ type: "error", message: error.message || "Error al publicar." });
     } finally {
       setPublishing(false);
+    }
+  };
+
+  /* ── Catálogo CRUD ── */
+  const openCreateCourse = () => {
+    setCourseModal({ mode: "create" });
+    setCourseForm({ name: "", description: "", content_url: "" });
+  };
+
+  const openEditCourse = (course) => {
+    setCourseModal({ mode: "edit", course });
+    setCourseForm({ name: course.name, description: course.description || "", content_url: course.content_url });
+  };
+
+  const saveCourse = async () => {
+    if (!courseForm.name.trim() || !courseForm.content_url.trim()) {
+      setStatus({ type: "error", message: "Nombre y URL son obligatorios." });
+      return;
+    }
+    try {
+      setSavingCourse(true);
+      if (courseModal.mode === "create") {
+        await api.post("/admin/courses", {
+          name: courseForm.name.trim(),
+          description: courseForm.description.trim() || null,
+          content_url: courseForm.content_url.trim(),
+        });
+        setStatus({ type: "success", message: "Curso creado en el cat\u00e1logo." });
+      } else {
+        await api.patch(`/admin/courses/${courseModal.course.id}`, {
+          name: courseForm.name.trim(),
+          description: courseForm.description.trim() || null,
+          content_url: courseForm.content_url.trim(),
+        });
+        setStatus({ type: "success", message: "Curso actualizado." });
+      }
+      setCourseModal(null);
+      const coursesData = await api.get("/admin/courses");
+      setCatalogCourses(Array.isArray(coursesData) ? coursesData : []);
+    } catch (error) {
+      setStatus({ type: "error", message: error.message || "Error guardando curso." });
+    } finally {
+      setSavingCourse(false);
+    }
+  };
+
+  const deleteCourse = async (courseId) => {
+    try {
+      await api.delete(`/admin/courses/${courseId}`);
+      const coursesData = await api.get("/admin/courses");
+      setCatalogCourses(Array.isArray(coursesData) ? coursesData : []);
+      setStatus({ type: "success", message: "Curso desactivado del cat\u00e1logo." });
+    } catch (error) {
+      setStatus({ type: "error", message: error.message || "Error eliminando curso." });
     }
   };
 
@@ -159,8 +222,7 @@ export default function AdminDashboard() {
 
   /* ═══ UPPER NAV ═══ */
   const navItems = [
-    { key: "pending", label: "Pendientes", icon: Clock3, count: pending.length },
-    { key: "metrics", label: "Métricas", icon: BarChart3, count: null },
+    { key: "pending", label: "Pendientes", icon: Clock3, count: pending.length },    { key: "courses", label: "Cat\u00e1logo de Cursos", icon: GraduationCap, count: catalogCourses.length },    { key: "metrics", label: "Métricas", icon: BarChart3, count: null },
     { key: "users", label: "Usuarios", icon: Users, count: users.length },
   ];
 
@@ -244,6 +306,104 @@ export default function AdminDashboard() {
                     </motion.article>
                   ))}
                 </motion.div>
+              )}
+            </motion.div>
+          )}
+
+          {/* ══════════ TAB: Catálogo de Cursos ══════════ */}
+          {activeTab === "courses" && (
+            <motion.div key="courses" {...tabContent}>
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Catálogo de Cursos</h2>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-zinc-500">
+                    Gestiona los cursos que se asignan al aprobar oportunidades.
+                  </p>
+                </div>
+                <button
+                  onClick={openCreateCourse}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98]"
+                >
+                  <Plus className="h-4 w-4" /> Añadir Nuevo Curso
+                </button>
+              </div>
+
+              {catalogCourses.length === 0 ? (
+                <motion.div {...fadeUp} className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 bg-white dark:bg-white/[0.02] p-16 text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
+                    <GraduationCap className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-zinc-500">No hay cursos en el catálogo. Crea el primero.</p>
+                </motion.div>
+              ) : (
+                <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02]">
+                  {/* Desktop table */}
+                  <div className="hidden sm:block">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02]">
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Nombre</th>
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">URL</th>
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Descripción</th>
+                          <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-white/[0.04]">
+                        {catalogCourses.map((c) => (
+                          <tr key={c.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                            <td className="px-6 py-4 font-medium text-gray-800 dark:text-zinc-200">{c.name}</td>
+                            <td className="px-6 py-4">
+                              <a href={c.content_url} target="_blank" rel="noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:underline truncate block max-w-xs text-xs">
+                                {c.content_url}
+                              </a>
+                            </td>
+                            <td className="px-6 py-4 text-gray-500 dark:text-zinc-400 text-xs max-w-xs truncate">{c.description || "—"}</td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  onClick={() => openEditCourse(c)}
+                                  className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] hover:text-gray-700 dark:hover:text-zinc-200 transition-colors"
+                                  title="Editar"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteCourse(c.id)}
+                                  className="rounded-lg p-2 text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile list */}
+                  <div className="divide-y divide-gray-100 dark:divide-white/[0.04] sm:hidden">
+                    {catalogCourses.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between px-4 py-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-800 dark:text-zinc-200">{c.name}</p>
+                          <a href={c.content_url} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline truncate block">
+                            {c.content_url}
+                          </a>
+                        </div>
+                        <div className="inline-flex items-center gap-1 ml-3 shrink-0">
+                          <button onClick={() => openEditCourse(c)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors" title="Editar">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => deleteCourse(c.id)} className="rounded-lg p-2 text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 transition-colors" title="Eliminar">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </motion.div>
           )}
@@ -462,7 +622,7 @@ export default function AdminDashboard() {
         </AnimatePresence>
       )}
 
-      {/* ═══════ Modal: Asignar curso y publicar ═══════ */}
+      {/* ═══════ Modal: Asignar curso y publicar (Dropdown) ═══════ */}
       <AnimatePresence>
         {publishModal && (
           <motion.div
@@ -484,9 +644,9 @@ export default function AdminDashboard() {
               {/* Header */}
               <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/[0.06] px-6 py-4">
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100">Asignar curso obligatorio</h3>
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100">Aprobar oportunidad</h3>
                   <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500">
-                    El estudiante deberá completar este curso antes de poder postular.
+                    Selecciona un curso del catálogo para asignar como requisito obligatorio.
                   </p>
                 </div>
                 <button
@@ -505,30 +665,39 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Form fields */}
-              <div className="space-y-4 px-6 pt-5 pb-6">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                    Nombre del curso <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    value={courseName}
-                    onChange={(e) => setCourseName(e.target.value)}
-                    placeholder="Ej: Fundamentos de React"
-                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                    URL del contenido <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    value={courseUrl}
-                    onChange={(e) => setCourseUrl(e.target.value)}
-                    placeholder="https://curso.com/modulo"
-                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
-                  />
-                </div>
+              {/* Dropdown */}
+              <div className="px-6 pt-5 pb-6">
+                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                  Curso obligatorio <span className="text-rose-500">*</span>
+                </label>
+                {catalogCourses.length === 0 ? (
+                  <div className="rounded-lg border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400">
+                    No hay cursos en el catálogo. Crea uno en la pestaña "Catálogo de Cursos" primero.
+                  </div>
+                ) : (
+                  <select
+                    value={selectedCatalogId}
+                    onChange={(e) => setSelectedCatalogId(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
+                  >
+                    <option value="">— Selecciona un curso —</option>
+                    {catalogCourses.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                )}
+                {selectedCatalogId && (() => {
+                  const sel = catalogCourses.find((c) => c.id === Number(selectedCatalogId));
+                  return sel ? (
+                    <div className="mt-3 rounded-lg border border-gray-200 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.02] p-3">
+                      <p className="text-xs font-medium text-gray-700 dark:text-zinc-300">{sel.name}</p>
+                      {sel.description && <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500">{sel.description}</p>}
+                      <a href={sel.content_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-emerald-600 dark:text-emerald-400 hover:underline truncate max-w-full">
+                        {sel.content_url}
+                      </a>
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               {/* Actions */}
@@ -541,11 +710,103 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   onClick={confirmPublish}
-                  disabled={publishing || !courseName.trim() || !courseUrl.trim()}
+                  disabled={publishing || !selectedCatalogId}
                   className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   {publishing ? "Publicando…" : "Publicar oportunidad"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════ Modal: Crear / Editar curso del catálogo ═══════ */}
+      <AnimatePresence>
+        {courseModal && (
+          <motion.div
+            key="course-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setCourseModal(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 shadow-2xl"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100">
+                  {courseModal.mode === "create" ? "Nuevo Curso" : "Editar Curso"}
+                </h3>
+                <button
+                  onClick={() => setCourseModal(null)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Form */}
+              <div className="space-y-4 px-6 pt-5 pb-6">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    Nombre <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    value={courseForm.name}
+                    onChange={(e) => setCourseForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="Ej: Fundamentos de React"
+                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    URL del contenido <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    value={courseForm.content_url}
+                    onChange={(e) => setCourseForm((f) => ({ ...f, content_url: e.target.value }))}
+                    placeholder="https://curso.com/modulo"
+                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    Descripción <span className="text-xs font-normal text-gray-400 dark:text-zinc-600">(opcional)</span>
+                  </label>
+                  <textarea
+                    value={courseForm.description}
+                    onChange={(e) => setCourseForm((f) => ({ ...f, description: e.target.value }))}
+                    rows={3}
+                    placeholder="Breve descripción del curso…"
+                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                <button
+                  onClick={() => setCourseModal(null)}
+                  className="rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-gray-700 dark:text-zinc-300 transition-all hover:bg-gray-200 dark:hover:bg-white/[0.06]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={saveCourse}
+                  disabled={savingCourse || !courseForm.name.trim() || !courseForm.content_url.trim()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {savingCourse ? "Guardando…" : courseModal.mode === "create" ? "Crear curso" : "Guardar cambios"}
                 </button>
               </div>
             </motion.div>

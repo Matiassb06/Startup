@@ -73,12 +73,14 @@ class Course(Base):
     opportunity_id = Column(
         BigInteger,
         ForeignKey("opportunities.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         unique=True,
     )
     name = Column(String(255), nullable=False, server_default=text("'Curso obligatorio'"))
+    description = Column(Text, nullable=True)
     content_url = Column(Text, nullable=False)
     quiz_data = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    is_active = Column(Boolean, nullable=False, server_default=text("true"))
 
     opportunity = relationship("Opportunity", back_populates="course")
     progress_records = relationship("UserProgress", back_populates="course", cascade="all, delete-orphan")
