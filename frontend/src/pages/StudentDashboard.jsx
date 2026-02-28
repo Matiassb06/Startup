@@ -54,7 +54,7 @@ function LoadingSkeleton() {
   return (
     <div className="space-y-5">
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="h-36 animate-pulse rounded-xl bg-white/5" />
+        <div key={i} className="h-36 animate-pulse rounded-xl bg-gray-100 dark:bg-white/5" />
       ))}
     </div>
   );
@@ -63,13 +63,13 @@ function LoadingSkeleton() {
 /* ───── "Coming Soon" Placeholder ───── */
 function ComingSoon({ icon: Icon, title, description }) {
   return (
-    <motion.div {...fadeUp} className="flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.02] p-16 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-500/10">
-        <Icon className="h-7 w-7 text-emerald-400" />
+    <motion.div {...fadeUp} className="flex flex-col items-center justify-center rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-16 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
+        <Icon className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
       </div>
-      <h3 className="text-lg font-semibold text-zinc-100">{title}</h3>
-      <p className="mt-2 max-w-md text-sm text-zinc-500">{description}</p>
-      <span className="mt-4 inline-block rounded-full bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-400">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">{title}</h3>
+      <p className="mt-2 max-w-md text-sm text-gray-500 dark:text-zinc-500">{description}</p>
+      <span className="mt-4 inline-block rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
         Próximamente
       </span>
     </motion.div>
@@ -183,42 +183,42 @@ export default function StudentDashboard() {
           {activeTab === "overview" && (
             <motion.div key="overview" {...tabContent} className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-zinc-100">Bienvenido, {displayName.split(" ")[0]}</h2>
-                <p className="mt-1 text-sm text-zinc-500">Resumen de tu actividad en la plataforma.</p>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Bienvenido, {displayName.split(" ")[0]}</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-zinc-500">Resumen de tu actividad en la plataforma.</p>
               </div>
 
               {/* Stats cards */}
               <motion.div variants={stagger} initial="initial" animate="animate" className="grid gap-4 sm:grid-cols-3">
                 {[
-                  { label: "Vacantes disponibles", value: opportunities.length, color: "text-zinc-100" },
-                  { label: "Postulaciones enviadas", value: applications.length, color: "text-emerald-400" },
-                  { label: "Cursos completados", value: coursesCompleted, color: "text-emerald-400" },
+                  { label: "Vacantes disponibles", value: opportunities.length, color: "text-gray-900 dark:text-zinc-100" },
+                  { label: "Postulaciones enviadas", value: applications.length, color: "text-emerald-600 dark:text-emerald-400" },
+                  { label: "Cursos completados", value: coursesCompleted, color: "text-emerald-600 dark:text-emerald-400" },
                 ].map((s) => (
                   <motion.div
                     key={s.label}
                     variants={fadeUp}
-                    className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5"
+                    className="rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-5"
                   >
                     <p className={`text-3xl font-bold tabular-nums ${s.color}`}>
                       <AnimatedNumber value={s.value} />
                     </p>
-                    <p className="mt-1 text-xs text-zinc-500">{s.label}</p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-zinc-500">{s.label}</p>
                   </motion.div>
                 ))}
               </motion.div>
 
               {/* Recent applications */}
               {applications.length > 0 && (
-                <motion.div {...fadeUp} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
-                  <h3 className="mb-4 text-sm font-semibold text-zinc-300">Postulaciones recientes</h3>
+                <motion.div {...fadeUp} className="rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-6">
+                  <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-zinc-300">Postulaciones recientes</h3>
                   <div className="space-y-3">
                     {applications.slice(0, 3).map((app) => (
-                      <div key={app.application_id} className="flex items-center justify-between rounded-lg bg-white/[0.02] px-4 py-3">
+                      <div key={app.application_id} className="flex items-center justify-between rounded-lg bg-white dark:bg-white/[0.02] px-4 py-3">
                         <div>
-                          <p className="text-sm font-medium text-zinc-200">{app.opportunity_title}</p>
-                          <p className="text-xs text-zinc-500">{app.company_name}</p>
+                          <p className="text-sm font-medium text-gray-800 dark:text-zinc-200">{app.opportunity_title}</p>
+                          <p className="text-xs text-gray-500 dark:text-zinc-500">{app.company_name}</p>
                         </div>
-                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                           <CheckCircle2 className="h-3 w-3" /> Postulado
                         </span>
                       </div>
@@ -227,7 +227,7 @@ export default function StudentDashboard() {
                   {applications.length > 3 && (
                     <button
                       onClick={() => setActiveTab("applications")}
-                      className="mt-3 text-xs font-medium text-emerald-400 hover:text-emerald-300 transition-colors"
+                      className="mt-3 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
                     >
                       Ver todas las postulaciones →
                     </button>
@@ -241,18 +241,18 @@ export default function StudentDashboard() {
           {activeTab === "courses" && (
             <motion.div key="courses" {...tabContent}>
               <div className="mb-6">
-                <h2 className="text-lg font-semibold text-zinc-100">Ruta de Aprendizaje</h2>
-                <p className="mt-1 text-sm text-zinc-500">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Ruta de Aprendizaje</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-zinc-500">
                   Completa los cursos asociados a cada vacante para desbloquear tu postulación.
                 </p>
               </div>
 
               {opportunities.length === 0 ? (
-                <motion.div {...fadeUp} className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-white/[0.02] p-16 text-center">
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-white/5">
-                    <GraduationCap className="h-7 w-7 text-zinc-500" />
+                <motion.div {...fadeUp} className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 bg-white dark:bg-white/[0.02] p-16 text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/5">
+                    <GraduationCap className="h-7 w-7 text-gray-500 dark:text-zinc-500" />
                   </div>
-                  <p className="text-sm text-zinc-500">No hay cursos disponibles por el momento.</p>
+                  <p className="text-sm text-gray-500 dark:text-zinc-500">No hay cursos disponibles por el momento.</p>
                 </motion.div>
               ) : (
                 <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-4">
@@ -262,17 +262,17 @@ export default function StudentDashboard() {
                       <motion.div
                         key={opp.id}
                         variants={fadeUp}
-                        className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] p-6"
+                        className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-6"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <h3 className="text-base font-semibold text-zinc-100">{opp.title}</h3>
-                            <p className="mt-0.5 text-sm text-zinc-500">{opp.company_name}</p>
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100">{opp.title}</h3>
+                            <p className="mt-0.5 text-sm text-gray-500 dark:text-zinc-500">{opp.company_name}</p>
                           </div>
                           <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
                             opp.course_completed
-                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                              : "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                              ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : "border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
                           }`}>
                             {opp.course_completed ? (
                               <><CheckCircle2 className="h-3.5 w-3.5" /> Completado</>
@@ -284,11 +284,11 @@ export default function StudentDashboard() {
 
                         {/* Progress bar */}
                         <div className="mt-5">
-                          <div className="mb-1.5 flex justify-between text-xs text-zinc-500">
+                          <div className="mb-1.5 flex justify-between text-xs text-gray-500 dark:text-zinc-500">
                             <span>Progreso del curso</span>
                             <span className="font-medium tabular-nums">{progress}%</span>
                           </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                          <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-white/5">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${progress}%` }}
@@ -308,7 +308,7 @@ export default function StudentDashboard() {
                             href={opp.course_content_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 transition-colors hover:text-emerald-300"
+                            className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 transition-colors hover:text-emerald-700 dark:hover:text-emerald-300"
                           >
                             <ExternalLink className="h-3.5 w-3.5" /> Ver material del curso
                           </a>
@@ -337,18 +337,18 @@ export default function StudentDashboard() {
           {activeTab === "opportunities" && (
             <motion.div key="opportunities" {...tabContent}>
               <div className="mb-6">
-                <h2 className="text-lg font-semibold text-zinc-100">Bolsa de Oportunidades</h2>
-                <p className="mt-1 text-sm text-zinc-500">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Bolsa de Oportunidades</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-zinc-500">
                   Postula a las vacantes disponibles. Completa el curso para desbloquear la postulación.
                 </p>
               </div>
 
               {opportunities.length === 0 ? (
-                <motion.div {...fadeUp} className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-white/[0.02] p-16 text-center">
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-white/5">
-                    <BriefcaseBusiness className="h-7 w-7 text-zinc-500" />
+                <motion.div {...fadeUp} className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 bg-white dark:bg-white/[0.02] p-16 text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/5">
+                    <BriefcaseBusiness className="h-7 w-7 text-gray-500 dark:text-zinc-500" />
                   </div>
-                  <p className="text-sm text-zinc-500">No hay vacantes disponibles por el momento.</p>
+                  <p className="text-sm text-gray-500 dark:text-zinc-500">No hay vacantes disponibles por el momento.</p>
                 </motion.div>
               ) : (
                 <motion.div variants={stagger} initial="initial" animate="animate" className="grid gap-5 lg:grid-cols-2">
@@ -359,21 +359,21 @@ export default function StudentDashboard() {
                       <motion.article
                         key={opp.id}
                         variants={fadeUp}
-                        className="group overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 transition-all hover:border-emerald-500/20 hover:bg-white/[0.04]"
+                        className="group overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-6 transition-all hover:border-emerald-300 dark:hover:border-emerald-500/20 hover:bg-gray-100 dark:hover:bg-white/[0.04]"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <h3 className="text-base font-semibold text-zinc-100 transition-colors group-hover:text-emerald-400">
+                            <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100 transition-colors group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
                               {opp.title}
                             </h3>
-                            <p className="mt-0.5 text-sm text-zinc-500">{opp.company_name}</p>
+                            <p className="mt-0.5 text-sm text-gray-500 dark:text-zinc-500">{opp.company_name}</p>
                           </div>
                           <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
                             opp.already_applied
-                              ? "border-blue-500/30 bg-blue-500/10 text-blue-400"
+                              ? "border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
                               : canApply
-                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                                : "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                                ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                : "border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
                           }`}>
                             {opp.already_applied ? (
                               <><CheckCircle2 className="h-3.5 w-3.5" /> Postulado</>
@@ -385,20 +385,20 @@ export default function StudentDashboard() {
                           </span>
                         </div>
 
-                        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-zinc-400">
+                        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-gray-500 dark:text-zinc-400">
                           {opp.description}
                         </p>
                         {opp.requirements && (
-                          <p className="mt-2 text-xs text-zinc-600">Requisitos: {opp.requirements}</p>
+                          <p className="mt-2 text-xs text-gray-400 dark:text-zinc-600">Requisitos: {opp.requirements}</p>
                         )}
 
                         {/* Progress bar */}
                         <div className="mt-5">
-                          <div className="mb-1.5 flex justify-between text-xs text-zinc-500">
+                          <div className="mb-1.5 flex justify-between text-xs text-gray-500 dark:text-zinc-500">
                             <span>Progreso del curso</span>
                             <span className="font-medium tabular-nums">{progress}%</span>
                           </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                          <div className="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-white/5">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${progress}%` }}
@@ -421,7 +421,7 @@ export default function StudentDashboard() {
                               className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold shadow-sm transition-all ${
                                 canApply
                                   ? "bg-emerald-600 text-white hover:bg-emerald-500 active:scale-[0.98]"
-                                  : "cursor-not-allowed bg-white/5 text-zinc-600"
+                                  : "cursor-not-allowed bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-zinc-600"
                               }`}
                             >
                               <Send className="h-3.5 w-3.5" /> Postular
@@ -440,41 +440,41 @@ export default function StudentDashboard() {
           {activeTab === "applications" && (
             <motion.div key="applications" {...tabContent}>
               <div className="mb-6">
-                <h2 className="text-lg font-semibold text-zinc-100">Mis Postulaciones</h2>
-                <p className="mt-1 text-sm text-zinc-500">Historial de tus postulaciones enviadas.</p>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Mis Postulaciones</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-zinc-500">Historial de tus postulaciones enviadas.</p>
               </div>
 
               {applications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-white/[0.02] p-16 text-center">
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-white/5">
-                    <FileText className="h-7 w-7 text-zinc-500" />
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-zinc-700 bg-white dark:bg-white/[0.02] p-16 text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gray-100 dark:bg-white/5">
+                    <FileText className="h-7 w-7 text-gray-500 dark:text-zinc-500" />
                   </div>
-                  <p className="text-sm text-zinc-500">Aún no has postulado a ninguna oportunidad.</p>
+                  <p className="text-sm text-gray-500 dark:text-zinc-500">Aún no has postulado a ninguna oportunidad.</p>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]">
+                <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02]">
                   {/* Desktop table */}
                   <div className="hidden sm:block">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">Oportunidad</th>
-                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">Empresa</th>
-                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">Estado</th>
-                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">Fecha</th>
+                        <tr className="border-b border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02]">
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Oportunidad</th>
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Empresa</th>
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Estado</th>
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Fecha</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/[0.04]">
+                      <tbody className="divide-y divide-gray-100 dark:divide-white/[0.04]">
                         {applications.map((app, idx) => (
-                          <tr key={app.application_id} className="transition-colors hover:bg-white/[0.02]">
-                            <td className="px-6 py-4 font-medium text-zinc-200">{app.opportunity_title}</td>
-                            <td className="px-6 py-4 text-zinc-400">{app.company_name}</td>
+                          <tr key={app.application_id} className="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                            <td className="px-6 py-4 font-medium text-gray-800 dark:text-zinc-200">{app.opportunity_title}</td>
+                            <td className="px-6 py-4 text-gray-500 dark:text-zinc-400">{app.company_name}</td>
                             <td className="px-6 py-4">
-                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                                 <CheckCircle2 className="h-3 w-3" /> Postulado
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-zinc-500">
+                            <td className="px-6 py-4 text-gray-500 dark:text-zinc-500">
                               {app.applied_at ? new Date(app.applied_at).toLocaleDateString("es-PE") : "—"}
                             </td>
                           </tr>
@@ -484,19 +484,19 @@ export default function StudentDashboard() {
                   </div>
 
                   {/* Mobile list */}
-                  <div className="divide-y divide-white/[0.04] sm:hidden">
+                  <div className="divide-y divide-gray-100 dark:divide-white/[0.04] sm:hidden">
                     {applications.map((app) => (
                       <div key={app.application_id} className="px-4 py-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-medium text-zinc-200">{app.opportunity_title}</p>
-                            <p className="mt-0.5 text-sm text-zinc-500">{app.company_name}</p>
+                            <p className="font-medium text-gray-800 dark:text-zinc-200">{app.opportunity_title}</p>
+                            <p className="mt-0.5 text-sm text-gray-500 dark:text-zinc-500">{app.company_name}</p>
                           </div>
-                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                             <CheckCircle2 className="h-3 w-3" /> Postulado
                           </span>
                         </div>
-                        <p className="mt-2 text-xs text-zinc-600">
+                        <p className="mt-2 text-xs text-gray-400 dark:text-zinc-600">
                           {app.applied_at ? new Date(app.applied_at).toLocaleDateString("es-PE") : "—"}
                         </p>
                       </div>
@@ -510,11 +510,11 @@ export default function StudentDashboard() {
           {/* ══════════ TAB: Mi Currículum ══════════ */}
           {activeTab === "resume" && profile && (
             <motion.div key="resume" {...tabContent} className="mx-auto max-w-2xl">
-              <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]">
+              <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02]">
                 {/* Profile header */}
                 <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 px-8 py-8">
                   <div className="flex items-center gap-5">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 text-xl font-bold text-white ring-2 ring-white/30">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-white/20 text-xl font-bold text-white ring-2 ring-gray-200 dark:ring-white/30">
                       {displayName.split(" ").filter(Boolean).map((w) => w[0]).join("").toUpperCase().slice(0, 2)}
                     </div>
                     <div>
@@ -528,15 +528,15 @@ export default function StudentDashboard() {
                 <div className="p-8">
                   <div className="grid gap-4 sm:grid-cols-3">
                     {[
-                      { label: "Vacantes disponibles", value: opportunities.length, color: "text-zinc-100" },
-                      { label: "Postulaciones", value: applications.length, color: "text-emerald-400" },
-                      { label: "Cursos completados", value: coursesCompleted, color: "text-emerald-400" },
+                      { label: "Vacantes disponibles", value: opportunities.length, color: "text-gray-900 dark:text-zinc-100" },
+                      { label: "Postulaciones", value: applications.length, color: "text-emerald-600 dark:text-emerald-400" },
+                      { label: "Cursos completados", value: coursesCompleted, color: "text-emerald-600 dark:text-emerald-400" },
                     ].map((s) => (
-                      <div key={s.label} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-center">
+                      <div key={s.label} className="rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-4 text-center">
                         <p className={`text-3xl font-bold tabular-nums ${s.color}`}>
                           <AnimatedNumber value={s.value} />
                         </p>
-                        <p className="mt-1 text-xs text-zinc-500">{s.label}</p>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-zinc-500">{s.label}</p>
                       </div>
                     ))}
                   </div>
@@ -544,17 +544,17 @@ export default function StudentDashboard() {
                   {/* Profile data */}
                   {profile.profile_data && Object.keys(profile.profile_data).length > 0 && (
                     <div className="mt-8">
-                      <h3 className="mb-3 text-sm font-semibold text-zinc-300">Datos de perfil</h3>
-                      <div className="overflow-hidden rounded-lg border border-white/[0.06]">
+                      <h3 className="mb-3 text-sm font-semibold text-gray-700 dark:text-zinc-300">Datos de perfil</h3>
+                      <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-white/[0.06]">
                         {Object.entries(profile.profile_data).map(([key, value], idx) => (
                           <div
                             key={key}
                             className={`flex justify-between px-4 py-3 text-sm ${
-                              idx % 2 === 1 ? "bg-white/[0.02]" : ""
+                              idx % 2 === 1 ? "bg-white dark:bg-white/[0.02]" : ""
                             }`}
                           >
-                            <span className="capitalize text-zinc-500">{key.replace(/_/g, " ")}</span>
-                            <span className="font-medium text-zinc-200">{String(value)}</span>
+                            <span className="capitalize text-gray-500 dark:text-zinc-500">{key.replace(/_/g, " ")}</span>
+                            <span className="font-medium text-gray-800 dark:text-zinc-200">{String(value)}</span>
                           </div>
                         ))}
                       </div>

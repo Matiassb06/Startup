@@ -19,7 +19,8 @@ export function ThemeProvider({ children }) {
     }
   });
 
-  const resolved = theme === "system" ? getSystemTheme() : theme;
+  const [systemTheme, setSystemTheme] = useState(getSystemTheme);
+  const resolved = theme === "system" ? systemTheme : theme;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -33,14 +34,13 @@ export function ThemeProvider({ children }) {
     } catch {}
   }, [theme, resolved]);
 
-  /* Listen for OS theme changes when in "system" mode */
+  /* Listen for OS theme changes (always, so system mode reacts) */
   useEffect(() => {
-    if (theme !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => setTheme((t) => (t === "system" ? "system" : t)); // force re-render
+    const handler = (e) => setSystemTheme(e.matches ? "dark" : "light");
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme]);
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, resolved, setTheme }}>

@@ -24,10 +24,10 @@ const fadeUp = {
 /* ───── Section Card ───── */
 function Section({ title, description, children }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
+    <div className="rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-6">
       <div className="mb-5">
-        <h3 className="text-[15px] font-semibold text-zinc-100">{title}</h3>
-        {description && <p className="mt-0.5 text-sm text-zinc-500">{description}</p>}
+        <h3 className="text-[15px] font-semibold text-gray-900 dark:text-zinc-100">{title}</h3>
+        {description && <p className="mt-0.5 text-sm text-gray-500 dark:text-zinc-500">{description}</p>}
       </div>
       {children}
     </div>
@@ -37,8 +37,8 @@ function Section({ title, description, children }) {
 /* ───── Field Row ───── */
 function Field({ label, children }) {
   return (
-    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3 border-b border-white/[0.04] last:border-0">
-      <label className="text-sm font-medium text-zinc-300 shrink-0">{label}</label>
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3 border-b border-gray-100 dark:border-white/[0.04] last:border-0">
+      <label className="text-sm font-medium text-gray-700 dark:text-zinc-300 shrink-0">{label}</label>
       <div className="sm:max-w-xs sm:w-full">{children}</div>
     </div>
   );
@@ -47,15 +47,15 @@ function Field({ label, children }) {
 /* ───── Toggle Switch ───── */
 function Toggle({ enabled, onChange, label, description }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3.5 border-b border-white/[0.04] last:border-0">
+    <div className="flex items-start justify-between gap-4 py-3.5 border-b border-gray-100 dark:border-white/[0.04] last:border-0">
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-zinc-300">{label}</p>
-        {description && <p className="mt-0.5 text-xs text-zinc-500">{description}</p>}
+        <p className="text-sm font-medium text-gray-700 dark:text-zinc-300">{label}</p>
+        {description && <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500">{description}</p>}
       </div>
       <button
         onClick={() => onChange(!enabled)}
         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ${
-          enabled ? "bg-emerald-600" : "bg-zinc-700"
+          enabled ? "bg-emerald-600" : "bg-gray-300 dark:bg-zinc-700"
         }`}
       >
         <span
@@ -107,12 +107,12 @@ export default function SettingsPanel({ role = "student", profile }) {
     <motion.div {...fadeUp} className="mx-auto max-w-3xl space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-lg font-semibold text-zinc-100">Ajustes</h2>
-        <p className="mt-1 text-sm text-zinc-500">Configura tu cuenta, apariencia y preferencias de notificación.</p>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Ajustes</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-500">Configura tu cuenta, apariencia y preferencias de notificación.</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-xl border border-white/[0.06] bg-white/[0.02] p-1">
+      <div className="flex gap-1 rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-1">
         {tabs.map((tab) => {
           const isActive = settingsTab === tab.key;
           const Icon = tab.icon;
@@ -122,11 +122,11 @@ export default function SettingsPanel({ role = "student", profile }) {
               onClick={() => setSettingsTab(tab.key)}
               className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-150 ${
                 isActive
-                  ? "bg-emerald-500/15 text-emerald-400"
-                  : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]"
+                  ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  : "text-gray-500 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-white/[0.03]"
               }`}
             >
-              <Icon className={`h-4 w-4 ${isActive ? "text-emerald-400" : "text-zinc-600"}`} />
+              <Icon className={`h-4 w-4 ${isActive ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-zinc-600"}`} />
               <span className="hidden sm:inline">{tab.label}</span>
             </button>
           );
@@ -141,30 +141,30 @@ export default function SettingsPanel({ role = "student", profile }) {
               <input
                 readOnly
                 value={profile?.email || ""}
-                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-zinc-300 outline-none cursor-default opacity-70"
+                className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-3 py-2 text-sm text-gray-700 dark:text-zinc-300 outline-none cursor-default opacity-70"
               />
             </Field>
             <Field label={role === "company" ? "Razón Social" : "Nombre completo"}>
               <input
                 readOnly
                 value={userName}
-                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-zinc-300 outline-none cursor-default opacity-70"
+                className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-3 py-2 text-sm text-gray-700 dark:text-zinc-300 outline-none cursor-default opacity-70"
               />
             </Field>
             <Field label="Rol">
-              <span className="inline-block rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-400">
+              <span className="inline-block rounded-full bg-emerald-50 dark:bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 {role === "student" ? "Estudiante" : role === "company" ? "Empresa" : "Administrador"}
               </span>
             </Field>
           </Section>
 
           <Section title="Seguridad" description="Administra el acceso a tu cuenta.">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-3 border-b border-white/[0.04]">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-3 border-b border-gray-100 dark:border-white/[0.04]">
               <div>
-                <p className="text-sm font-medium text-zinc-300">Contraseña</p>
-                <p className="mt-0.5 text-xs text-zinc-500">Cambia tu contraseña de acceso.</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-zinc-300">Contraseña</p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500">Cambia tu contraseña de acceso.</p>
               </div>
-              <button className="inline-flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs font-semibold text-zinc-300 transition-all hover:bg-white/[0.06]">
+              <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2 text-xs font-semibold text-gray-700 dark:text-zinc-300 transition-all hover:bg-gray-200 dark:hover:bg-white/[0.06]">
                 <KeyRound className="h-3.5 w-3.5" /> Cambiar Contraseña
               </button>
             </div>
@@ -173,12 +173,12 @@ export default function SettingsPanel({ role = "student", profile }) {
           <Section title="Zona de peligro" description="Acciones irreversibles sobre tu cuenta.">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-3">
               <div>
-                <p className="text-sm font-medium text-rose-400">Eliminar cuenta</p>
-                <p className="mt-0.5 text-xs text-zinc-500">
+                <p className="text-sm font-medium text-rose-600 dark:text-rose-400">Eliminar cuenta</p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500">
                   Esta acción es permanente. Todos tus datos serán eliminados sin posibilidad de recuperación.
                 </p>
               </div>
-              <button className="inline-flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-400 transition-all hover:bg-rose-500/20">
+              <button className="inline-flex items-center gap-2 rounded-lg border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 px-4 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 transition-all hover:bg-rose-100 dark:hover:bg-rose-500/20">
                 <Trash2 className="h-3.5 w-3.5" /> Eliminar Cuenta
               </button>
             </div>
@@ -200,8 +200,8 @@ export default function SettingsPanel({ role = "student", profile }) {
                     onClick={() => setTheme(opt.value)}
                     className={`relative flex flex-col items-center gap-3 rounded-xl border p-5 text-center transition-all duration-200 ${
                       isSelected
-                        ? "border-emerald-500/40 bg-emerald-500/10 ring-1 ring-emerald-500/20"
-                        : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"
+                        ? "border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-500/10 ring-1 ring-emerald-200 dark:ring-emerald-500/20"
+                        : "border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] hover:border-gray-300 dark:hover:border-white/[0.12] hover:bg-gray-100 dark:hover:bg-white/[0.04]"
                     }`}
                   >
                     {/* Check badge */}
@@ -211,15 +211,15 @@ export default function SettingsPanel({ role = "student", profile }) {
                       </span>
                     )}
                     <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                      isSelected ? "bg-emerald-500/20" : "bg-white/5"
+                      isSelected ? "bg-emerald-100 dark:bg-emerald-500/20" : "bg-gray-100 dark:bg-white/5"
                     }`}>
-                      <Icon className={`h-5 w-5 ${isSelected ? "text-emerald-400" : "text-zinc-500"}`} />
+                      <Icon className={`h-5 w-5 ${isSelected ? "text-emerald-600 dark:text-emerald-400" : "text-gray-500 dark:text-zinc-500"}`} />
                     </div>
                     <div>
-                      <p className={`text-sm font-semibold ${isSelected ? "text-emerald-400" : "text-zinc-300"}`}>
+                      <p className={`text-sm font-semibold ${isSelected ? "text-emerald-600 dark:text-emerald-400" : "text-gray-700 dark:text-zinc-300"}`}>
                         {opt.label}
                       </p>
-                      <p className="mt-1 text-[11px] leading-snug text-zinc-500">{opt.desc}</p>
+                      <p className="mt-1 text-[11px] leading-snug text-gray-500 dark:text-zinc-500">{opt.desc}</p>
                     </div>
                   </button>
                 );
@@ -232,7 +232,7 @@ export default function SettingsPanel({ role = "student", profile }) {
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="w-full rounded-lg border border-white/[0.08] bg-zinc-900 px-3 py-2 text-sm text-zinc-300 outline-none transition-all focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30"
+                className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-gray-700 dark:text-zinc-300 outline-none transition-all focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
               >
                 <option value="es">Español</option>
                 <option value="en">English</option>
