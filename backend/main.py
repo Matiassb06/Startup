@@ -1139,90 +1139,8 @@ def list_catalog_courses(
     return [_serialize_catalog_list_item(c) for c in courses]
 
 
-@app.get("/admin/courses/{course_id}", response_model=CatalogCourseOut)
-def get_catalog_course(
-    course_id: int,
-    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
-    db: Session = Depends(database.get_db),
-):
-    """Detalle de un curso con módulos y temas."""
-    course = db.query(models.Course).filter(
-        models.Course.id == course_id,
-        models.Course.opportunity_id.is_(None),
-    ).first()
-    if not course:
-        raise HTTPException(status_code=404, detail="Curso del catálogo no encontrado.")
-    return _serialize_catalog_course(course)
-
-
-@app.post("/admin/courses", response_model=CatalogCourseOut, status_code=201)
-def create_catalog_course(
-    payload: CatalogCourseCreateIn,
-    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
-    db: Session = Depends(database.get_db),
-):
-    """Crea un curso con módulos y temas anidados."""
-    course = models.Course(
-        name=payload.name,
-        description=payload.description,
-        opportunity_id=None,
-        is_active=True,
-    )
-    db.add(course)
-    db.flush()
-    _save_modules_topics(db, course, payload.modules)
-    _log_event(db, "catalog_course_created", user_id=current_user.id, payload={"name": payload.name})
-    db.commit()
-    db.refresh(course)
-    return _serialize_catalog_course(course)
-
-
-@app.patch("/admin/courses/{course_id}", response_model=CatalogCourseOut)
-def update_catalog_course(
-    course_id: int,
-    payload: CatalogCourseUpdateIn,
-    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
-    db: Session = Depends(database.get_db),
-):
-    """Edita un curso del catálogo. Si se envían modules, se reemplazan todos."""
-    course = db.query(models.Course).filter(
-        models.Course.id == course_id,
-        models.Course.opportunity_id.is_(None),
-    ).first()
-    if not course:
-        raise HTTPException(status_code=404, detail="Curso del catálogo no encontrado.")
-    if payload.name is not None:
-        course.name = payload.name
-    if payload.description is not None:
-        course.description = payload.description
-    if payload.modules is not None:
-        _save_modules_topics(db, course, payload.modules)
-    _log_event(db, "catalog_course_updated", user_id=current_user.id, course_id=course.id)
-    db.commit()
-    db.refresh(course)
-    return _serialize_catalog_course(course)
-
-
-@app.delete("/admin/courses/{course_id}")
-def delete_catalog_course(
-    course_id: int,
-    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
-    db: Session = Depends(database.get_db),
-):
-    """Desactiva (soft-delete) un curso del catálogo."""
-    course = db.query(models.Course).filter(
-        models.Course.id == course_id,
-        models.Course.opportunity_id.is_(None),
-    ).first()
-    if not course:
-        raise HTTPException(status_code=404, detail="Curso del catálogo no encontrado.")
-    course.is_active = False
-    _log_event(db, "catalog_course_deleted", user_id=current_user.id, course_id=course.id)
-    db.commit()
-    return {"message": "Curso desactivado del catálogo."}
-
-
 # ── AI: Generar curso con IA ──
+# (MUST be registered BEFORE /admin/courses/{course_id} to avoid route conflict)
 
 @app.post("/admin/courses/generate", response_model=CatalogCourseOut, status_code=201)
 def generate_course_with_ai(
@@ -1304,6 +1222,89 @@ def preview_ai_course(
     except Exception as e:
         logger.error(f"Error generando preview con IA: {e}")
         raise HTTPException(status_code=500, detail=f"Error de IA: {str(e)}")
+
+
+@app.get("/admin/courses/{course_id}", response_model=CatalogCourseOut)
+def get_catalog_course(
+    course_id: int,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    """Detalle de un curso con módulos y temas."""
+    course = db.query(models.Course).filter(
+        models.Course.id == course_id,
+        models.Course.opportunity_id.is_(None),
+    ).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso del catálogo no encontrado.")
+    return _serialize_catalog_course(course)
+
+
+@app.post("/admin/courses", response_model=CatalogCourseOut, status_code=201)
+def create_catalog_course(
+    payload: CatalogCourseCreateIn,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    """Crea un curso con módulos y temas anidados."""
+    course = models.Course(
+        name=payload.name,
+        description=payload.description,
+        opportunity_id=None,
+        is_active=True,
+    )
+    db.add(course)
+    db.flush()
+    _save_modules_topics(db, course, payload.modules)
+    _log_event(db, "catalog_course_created", user_id=current_user.id, payload={"name": payload.name})
+    db.commit()
+    db.refresh(course)
+    return _serialize_catalog_course(course)
+
+
+@app.patch("/admin/courses/{course_id}", response_model=CatalogCourseOut)
+def update_catalog_course(
+    course_id: int,
+    payload: CatalogCourseUpdateIn,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    """Edita un curso del catálogo. Si se envían modules, se reemplazan todos."""
+    course = db.query(models.Course).filter(
+        models.Course.id == course_id,
+        models.Course.opportunity_id.is_(None),
+    ).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso del catálogo no encontrado.")
+    if payload.name is not None:
+        course.name = payload.name
+    if payload.description is not None:
+        course.description = payload.description
+    if payload.modules is not None:
+        _save_modules_topics(db, course, payload.modules)
+    _log_event(db, "catalog_course_updated", user_id=current_user.id, course_id=course.id)
+    db.commit()
+    db.refresh(course)
+    return _serialize_catalog_course(course)
+
+
+@app.delete("/admin/courses/{course_id}")
+def delete_catalog_course(
+    course_id: int,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    """Desactiva (soft-delete) un curso del catálogo."""
+    course = db.query(models.Course).filter(
+        models.Course.id == course_id,
+        models.Course.opportunity_id.is_(None),
+    ).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso del catálogo no encontrado.")
+    course.is_active = False
+    _log_event(db, "catalog_course_deleted", user_id=current_user.id, course_id=course.id)
+    db.commit()
+    return {"message": "Curso desactivado del catálogo."}
 
 
 @app.get("/admin/metrics/summary", response_model=MetricsSummaryOut)

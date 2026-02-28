@@ -169,7 +169,7 @@ export default function AdminDashboard() {
 
   /* ── Modal de generación con IA ── */
   const [aiModal, setAiModal] = useState(false);
-  const [aiForm, setAiForm] = useState({ name: "", description: "", requirements: "", num_modules: 3, topics_per_module: 3 });
+  const [aiForm, setAiForm] = useState({ name: "", description: "", requirements: "", num_modules: 3, topics_per_module: 3, opportunity_id: "" });
   const [aiGenerating, setAiGenerating] = useState(false);
 
   const loadData = async () => {
@@ -347,6 +347,35 @@ export default function AdminDashboard() {
     }
   };
   /* ── Generar curso con IA ── */
+  const openAiModalForOpp = (opp) => {
+    setAiForm({
+      name: `Curso para: ${opp.title}`,
+      description: opp.description || "",
+      requirements: opp.requirements || "",
+      num_modules: 3,
+      topics_per_module: 3,
+      opportunity_id: String(opp.id),
+    });
+    setAiModal(true);
+  };
+
+  const handleAiOppChange = (oppId) => {
+    if (!oppId) {
+      setAiForm((f) => ({ ...f, opportunity_id: "", name: "", description: "", requirements: "" }));
+      return;
+    }
+    const opp = pending.find((o) => String(o.id) === String(oppId));
+    if (opp) {
+      setAiForm((f) => ({
+        ...f,
+        opportunity_id: String(opp.id),
+        name: `Curso para: ${opp.title}`,
+        description: opp.description || "",
+        requirements: opp.requirements || "",
+      }));
+    }
+  };
+
   const generateCourseWithAI = async () => {
     if (!aiForm.name.trim()) {
       setStatus({ type: "error", message: "Escribe el nombre del curso para que la IA lo genere." });
@@ -363,7 +392,7 @@ export default function AdminDashboard() {
         topics_per_module: aiForm.topics_per_module,
       });
       setAiModal(false);
-      setAiForm({ name: "", description: "", requirements: "", num_modules: 3, topics_per_module: 3 });
+      setAiForm({ name: "", description: "", requirements: "", num_modules: 3, topics_per_module: 3, opportunity_id: "" });
       const coursesData = await api.get("/admin/courses");
       setCatalogCourses(Array.isArray(coursesData) ? coursesData : []);
       setStatus({ type: "success", message: "✨ Curso generado con IA y guardado en el catálogo." });
@@ -468,6 +497,12 @@ export default function AdminDashboard() {
                           className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98]"
                         >
                           <CheckCircle2 className="h-4 w-4" /> Aprobar y asignar curso
+                        </button>
+                        <button
+                          onClick={() => openAiModalForOpp(opp)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-violet-300 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 px-4 py-2.5 text-xs font-semibold text-violet-700 dark:text-violet-300 shadow-sm transition-all hover:bg-violet-100 dark:hover:bg-violet-500/20 active:scale-[0.98]"
+                        >
+                          <Sparkles className="h-4 w-4" /> Generar curso con IA
                         </button>
                       </div>
                     </motion.article>
@@ -1071,6 +1106,36 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <>
+                    {/* Opportunity selector */}
+                    {pending.length > 0 && (
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                          Basado en oportunidad <span className="text-xs font-normal text-gray-400">(auto-completa los campos)</span>
+                        </label>
+                        <select
+                          value={aiForm.opportunity_id}
+                          onChange={(e) => handleAiOppChange(e.target.value)}
+                          className="w-full rounded-lg border border-violet-300 dark:border-violet-500/30 bg-violet-50/50 dark:bg-violet-500/5 px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all focus:border-violet-400 dark:focus:border-violet-500/50 focus:ring-1 focus:ring-violet-200 dark:focus:ring-violet-500/30"
+                        >
+                          <option value="">— Selecciona una oportunidad —</option>
+                          {pending.map((opp) => (
+                            <option key={opp.id} value={opp.id}>
+                              {opp.title}{opp.requirements ? ` (${opp.requirements.substring(0, 40)}…)` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {aiForm.opportunity_id && (
+                      <div className="rounded-lg border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/5 p-3">
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                          <CheckCircle2 className="inline h-3.5 w-3.5 mr-1" />
+                          Campos completados desde la oportunidad. Puedes editarlos antes de generar.
+                        </p>
+                      </div>
+                    )}
+
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
                         Nombre del curso <span className="text-rose-500">*</span>
@@ -1084,7 +1149,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                        Descripción <span className="text-xs font-normal text-gray-400">(opcional)</span>
+                        Descripción <span className="text-xs font-normal text-gray-400">(auto-completada si seleccionas oportunidad)</span>
                       </label>
                       <textarea
                         value={aiForm.description}
@@ -1096,7 +1161,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                        Requisitos del puesto <span className="text-xs font-normal text-gray-400">(opcional — mejora la relevancia)</span>
+                        Requisitos del puesto <span className="text-xs font-normal text-gray-400">(auto-completados si seleccionas oportunidad)</span>
                       </label>
                       <textarea
                         value={aiForm.requirements}

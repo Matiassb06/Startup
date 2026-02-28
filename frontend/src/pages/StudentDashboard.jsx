@@ -380,7 +380,7 @@ export default function StudentDashboard() {
                               onClick={() => completeCourse(opp)}
                               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98]"
                             >
-                              <BookOpen className="h-4 w-4" /> Completar curso
+                              <BookOpen className="h-4 w-4" /> Comenzar curso
                             </button>
                             <button
                               onClick={() => openTutor(opp.course_id)}
