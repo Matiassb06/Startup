@@ -311,7 +311,11 @@ export default function AdminDashboard() {
       const coursesData = await api.get("/admin/courses");
       setCatalogCourses(Array.isArray(coursesData) ? coursesData : []);
     } catch (error) {
-      setStatus({ type: "error", message: error.message || "Error guardando curso." });
+      const msg = error?.data?.detail
+        || (Array.isArray(error?.data) ? error.data.map((e) => e.msg).join("; ") : null)
+        || error.message
+        || "Error guardando curso.";
+      setStatus({ type: "error", message: msg });
     } finally {
       setSavingCourse(false);
     }
