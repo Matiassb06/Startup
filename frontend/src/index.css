@@ -8,25 +8,136 @@
 	}
 }
 
-
 @layer utilities {
 	.glass-panel {
 		@apply border border-white/10 bg-white/5 backdrop-blur-2xl;
 	}
-	
+
 	.premium-button {
 		@apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200;
 	}
 }
 
-/* Custom Scrollbar */
+/* ─── Tech Grid Background ─── */
+.tech-grid-bg {
+	background-image: radial-gradient(
+		circle at 1px 1px,
+		rgba(99, 102, 241, 0.045) 1px,
+		transparent 0
+	);
+	background-size: 32px 32px;
+}
+
+/* ─── Animated Glow Line ─── */
+.glow-line {
+	position: relative;
+	overflow: hidden;
+}
+.glow-line::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(99, 102, 241, 0.5),
+		transparent
+	);
+	animation: glow-slide 3s ease-in-out infinite;
+}
+@keyframes glow-slide {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+/* ─── Shimmer Skeleton ─── */
+.shimmer-skeleton {
+	background: linear-gradient(
+		90deg,
+		rgba(39, 39, 42, 0.3) 25%,
+		rgba(63, 63, 70, 0.3) 50%,
+		rgba(39, 39, 42, 0.3) 75%
+	);
+	background-size: 200% 100%;
+	animation: shimmer 1.5s ease-in-out infinite;
+	border-radius: 1rem;
+}
+@keyframes shimmer {
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
+}
+
+/* ─── Card Glow Hover ─── */
+.card-glow {
+	transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.card-glow:hover {
+	border-color: rgba(99, 102, 241, 0.25);
+	box-shadow:
+		0 0 30px rgba(99, 102, 241, 0.07),
+		0 8px 32px rgba(0, 0, 0, 0.2);
+	transform: translateY(-2px);
+}
+
+/* ─── Pulse Glow Badge ─── */
+@keyframes pulse-glow {
+	0%,
+	100% {
+		box-shadow: 0 0 6px rgba(16, 185, 129, 0.2);
+	}
+	50% {
+		box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+	}
+}
+.badge-glow {
+	animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+/* ─── Float Animations ─── */
+@keyframes float {
+	0%,
+	100% {
+		transform: translateY(0px);
+	}
+	50% {
+		transform: translateY(-12px);
+	}
+}
+@keyframes float-delayed {
+	0%,
+	100% {
+		transform: translateY(0px);
+	}
+	50% {
+		transform: translateY(-18px);
+	}
+}
+.animate-float {
+	animation: float 6s ease-in-out infinite;
+}
+.animate-float-delayed {
+	animation: float-delayed 8s ease-in-out 1s infinite;
+}
+
+/* ─── Custom Scrollbar ─── */
 ::-webkit-scrollbar {
-	width: 8px;
+	width: 6px;
 }
 ::-webkit-scrollbar-track {
-	background: #09090b;
+	background: transparent;
 }
 ::-webkit-scrollbar-thumb {
 	background: #27272a;
-	border-radius: 4px;
+	border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+	background: #3f3f46;
 }
