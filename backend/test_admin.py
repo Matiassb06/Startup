@@ -19,6 +19,20 @@ def _seed_pending_opportunity(db, company_user):
     return opp
 
 
+def _seed_catalog_course(db):
+    """Helper: crea un curso de catálogo (sin oportunidad) para usar al publicar."""
+    course = models.Course(
+        name="Curso QA Básico",
+        content_url="https://learn.example.com/qa-basics",
+        opportunity_id=None,
+        is_active=True,
+    )
+    db.add(course)
+    db.commit()
+    db.refresh(course)
+    return course
+
+
 class TestAdminPending:
     def test_list_pending(self, client, admin_token, db, company_user):
         _seed_pending_opportunity(db, company_user)
@@ -36,18 +50,37 @@ class TestAdminPending:
 class TestAdminPublish:
     def test_publish_ok(self, client, admin_token, db, company_user):
         opp = _seed_pending_opportunity(db, company_user)
-        resp = client.patch(f"/admin/opportunities/{opp.id}/publish", headers=_auth_header(admin_token))
+        cat = _seed_catalog_course(db)
+        resp = client.patch(
+            f"/admin/opportunities/{opp.id}/publish",
+            json={"catalog_course_id": cat.id},
+            headers=_auth_header(admin_token),
+        )
         assert resp.status_code == 200
         assert resp.json()["status"] == "published"
 
     def test_publish_idempotent(self, client, admin_token, db, company_user):
         opp = _seed_pending_opportunity(db, company_user)
-        client.patch(f"/admin/opportunities/{opp.id}/publish", headers=_auth_header(admin_token))
-        resp = client.patch(f"/admin/opportunities/{opp.id}/publish", headers=_auth_header(admin_token))
+        cat = _seed_catalog_course(db)
+        client.patch(
+            f"/admin/opportunities/{opp.id}/publish",
+            json={"catalog_course_id": cat.id},
+            headers=_auth_header(admin_token),
+        )
+        resp = client.patch(
+            f"/admin/opportunities/{opp.id}/publish",
+            json={"catalog_course_id": cat.id},
+            headers=_auth_header(admin_token),
+        )
         assert resp.status_code == 200
 
-    def test_publish_not_found(self, client, admin_token):
-        resp = client.patch("/admin/opportunities/99999/publish", headers=_auth_header(admin_token))
+    def test_publish_not_found(self, client, admin_token, db):
+        cat = _seed_catalog_course(db)
+        resp = client.patch(
+            "/admin/opportunities/99999/publish",
+            json={"catalog_course_id": cat.id},
+            headers=_auth_header(admin_token),
+        )
         assert resp.status_code == 404
 
 
@@ -56,7 +89,7 @@ class TestAdminCourse:
         opp = _seed_pending_opportunity(db, company_user)
         resp = client.patch(
             f"/admin/opportunities/{opp.id}/course",
-            json={"content_url": "https://learn.example.com/qa", "quiz_data": {"q": 5}},
+            json={"name": "Curso QA", "content_url": "https://learn.example.com/qa", "quiz_data": {"q": 5}},
             headers=_auth_header(admin_token),
         )
         assert resp.status_code == 200
@@ -67,12 +100,12 @@ class TestAdminCourse:
         opp = _seed_pending_opportunity(db, company_user)
         client.patch(
             f"/admin/opportunities/{opp.id}/course",
-            json={"content_url": "https://v1.com", "quiz_data": {}},
+            json={"name": "Curso v1", "content_url": "https://v1.com", "quiz_data": {}},
             headers=_auth_header(admin_token),
         )
         resp = client.patch(
             f"/admin/opportunities/{opp.id}/course",
-            json={"content_url": "https://v2.com", "quiz_data": {"updated": True}},
+            json={"name": "Curso v2", "content_url": "https://v2.com", "quiz_data": {"updated": True}},
             headers=_auth_header(admin_token),
         )
         assert resp.status_code == 200
