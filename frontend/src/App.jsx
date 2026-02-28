@@ -2,14 +2,14 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MarketingLayout } from "./layouts/MarketingLayout";
-import { AdminDashboard } from "./pages/AdminDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import { AboutUs } from "./pages/AboutUs";
 import { AuthPage } from "./pages/AuthPage";
 import { Contact } from "./pages/Contact";
-import { CompanyDashboard } from "./pages/CompanyDashboard";
+import CompanyDashboard from "./pages/CompanyDashboard";
 import { LandingPage } from "./pages/LandingPage";
 import { Methodology } from "./pages/Methodology";
-import { StudentDashboard } from "./pages/StudentDashboard";
+import StudentDashboard from "./pages/StudentDashboard";
 import { VerifyEmail } from "./pages/VerifyEmail";
 
 export default function App() {

@@ -4,16 +4,15 @@ import {
   BookCheck,
   CheckCircle2,
   Clock3,
-  LogOut,
   RefreshCcw,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
+import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../lib/api";
 import { clearSession } from "../lib/session";
 
@@ -46,22 +45,21 @@ function AnimatedNumber({ value, duration = 800 }) {
   return display;
 }
 
-/* ───── Shimmer Skeleton ───── */
+/* ───── Loading Skeleton ───── */
 function LoadingSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="shimmer-skeleton h-16 rounded-2xl" />
-      <div className="flex gap-2">
-        {[1, 2, 3].map((i) => <div key={i} className="shimmer-skeleton h-12 flex-1" />)}
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {[1, 2].map((i) => <div key={i} className="shimmer-skeleton h-56" />)}
+    <div className="space-y-5">
+      <div className="h-14 animate-pulse rounded-xl bg-gray-200/70" />
+      <div className="grid gap-5 lg:grid-cols-2">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-52 animate-pulse rounded-xl bg-gray-200/70" />
+        ))}
       </div>
     </div>
   );
 }
 
-export function AdminDashboard() {
+export default function AdminDashboard() {
   const navigate = useNavigate();
   const [pending, setPending] = useState([]);
   const [metrics, setMetrics] = useState(null);
@@ -73,16 +71,16 @@ export function AdminDashboard() {
   const [userFilter, setUserFilter] = useState("");
 
   const loadData = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const [pendingData, metricsData, usersData] = await Promise.all([
-        api.get("/admin/opportunities/pending"),
-        api.get("/admin/metrics/summary?window_days=30"),
+        api.get("/admin/pending-opportunities"),
+        api.get("/admin/metrics"),
         api.get("/admin/users"),
       ]);
       setPending(Array.isArray(pendingData) ? pendingData : []);
       setMetrics(metricsData);
-      setUsers(Array.isArray(usersData?.items) ? usersData.items : Array.isArray(usersData) ? usersData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error) {
       setStatus({ type: "error", message: error.message || "Error cargando datos." });
     } finally {
@@ -129,387 +127,393 @@ export function AdminDashboard() {
   const filteredUsers = userFilter ? users.filter((u) => u.role === userFilter) : users;
 
   const roleBadge = {
-    student: "bg-indigo-500/15 text-indigo-300",
-    company: "bg-violet-500/15 text-violet-300",
-    admin: "bg-rose-500/15 text-rose-300",
+    student: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    company: "bg-violet-50 text-violet-700 border-violet-200",
+    admin: "bg-rose-50 text-rose-700 border-rose-200",
   };
 
-  const tabs = [
+  const navItems = [
     { key: "pending", label: "Pendientes", icon: Clock3, count: pending.length },
     { key: "metrics", label: "Métricas", icon: BarChart3, count: null },
     { key: "users", label: "Usuarios", icon: Users, count: users.length },
   ];
 
   return (
-    <div className="relative min-h-screen bg-zinc-950 text-zinc-100 tech-grid-bg" style={{ fontFamily: "Inter, ui-sans-serif, system-ui" }}>
-      {/* ─── Decorative Orbs ─── */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-40 top-1/4 h-[500px] w-[500px] rounded-full bg-rose-500/[0.04] blur-[120px] animate-float" />
-        <div className="absolute -right-40 top-2/3 h-[400px] w-[400px] rounded-full bg-indigo-500/[0.06] blur-[100px] animate-float-delayed" />
-      </div>
-
-      {/* ─── Header ─── */}
-      <header className="relative z-10 border-b border-zinc-800/60 bg-zinc-950/60 backdrop-blur-2xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
-            <p className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.25em] text-rose-400/70">
-              <Sparkles className="h-3 w-3" /> Admin Dashboard
-            </p>
-            <h1 className="mt-0.5 bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-xl font-bold text-transparent">
-              Centro de Control
-            </h1>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-            className="flex items-center gap-2"
-          >
-            <button
-              onClick={loadData}
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-700/60 px-4 py-2 text-sm font-medium transition-all hover:border-indigo-400/40 hover:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
-            >
-              <RefreshCcw className="h-4 w-4" /> Refrescar
-            </button>
-            <Link
-              to="/"
-              className="rounded-xl border border-zinc-700/60 px-4 py-2 text-sm font-medium transition-all hover:border-indigo-400/40"
-            >
-              Inicio
-            </Link>
-            <button
-              onClick={logout}
-              className="inline-flex items-center gap-2 rounded-xl bg-zinc-800/80 px-4 py-2 text-sm font-medium transition-all hover:bg-zinc-700/80"
-            >
-              <LogOut className="h-4 w-4" /> Salir
-            </button>
-          </motion.div>
-        </div>
-        <div className="glow-line h-[1px] w-full bg-gradient-to-r from-transparent via-rose-500/20 to-transparent" />
-      </header>
-
-      <main className="relative z-10 mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* ─── Info bar ─── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="mb-6 relative overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-4 backdrop-blur-xl"
+    <DashboardLayout
+      title="Centro de Control"
+      navSection="Administración"
+      userName="Administrador"
+      userRole="admin"
+      roleColor="rose"
+      navItems={navItems}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      onLogout={logout}
+      statusToast={status}
+      onDismissStatus={() => setStatus({ type: "", message: "" })}
+      headerActions={
+        <button
+          onClick={loadData}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-50"
         >
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
-          <p className="inline-flex items-center gap-2 text-sm text-indigo-300/80">
-            <ShieldCheck className="h-4 w-4" /> Panel de administración — curación técnica, métricas y gestión de usuarios.
-          </p>
-        </motion.div>
+          <RefreshCcw className="h-4 w-4" /> Refrescar
+        </button>
+      }
+    >
+      {/* ─── Info banner ─── */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3"
+      >
+        <p className="inline-flex items-center gap-2 text-sm text-indigo-700">
+          <ShieldCheck className="h-4 w-4 shrink-0" />
+          Panel de administración — curación técnica, métricas y gestión de usuarios.
+        </p>
+      </motion.div>
 
-        {/* ─── Status Toast ─── */}
-        <AnimatePresence>
-          {status.message && (
-            <motion.div
-              initial={{ opacity: 0, y: -12, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.95 }}
-              transition={{ duration: 0.25 }}
-              className="mb-6"
-            >
-              <div
-                className={`rounded-xl border px-4 py-3 text-sm backdrop-blur-xl ${
-                  status.type === "success"
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.1)]"
-                    : "border-rose-500/30 bg-rose-500/10 text-rose-200 shadow-[0_0_20px_rgba(244,63,94,0.1)]"
-                }`}
-              >
-                {status.message}
-                <button
-                  onClick={() => setStatus({ type: "", message: "" })}
-                  className="ml-3 text-xs underline opacity-60 hover:opacity-100 transition-opacity"
-                >
-                  cerrar
-                </button>
+      {loading ? (
+        <LoadingSkeleton />
+      ) : (
+        <AnimatePresence mode="wait">
+          {/* ══════════ TAB: Pending Opportunities ══════════ */}
+          {activeTab === "pending" && (
+            <motion.div key="pending" {...tabContent}>
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900">Oportunidades pendientes</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Revisa, asocia cursos y publica oportunidades.
+                </p>
               </div>
+
+              {pending.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white p-16 text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-50">
+                    <CheckCircle2 className="h-7 w-7 text-emerald-500" />
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    No hay oportunidades pendientes de revisión.
+                  </p>
+                </div>
+              ) : (
+                <motion.div
+                  variants={stagger}
+                  initial="initial"
+                  animate="animate"
+                  className="grid gap-5 lg:grid-cols-2"
+                >
+                  {pending.map((opp) => (
+                    <motion.article
+                      key={opp.id}
+                      variants={fadeUp}
+                      className="group overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+                    >
+                      <h2 className="text-base font-semibold text-gray-900">{opp.title}</h2>
+                      <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-gray-600">
+                        {opp.description}
+                      </p>
+                      {opp.requirements && (
+                        <p className="mt-1 text-xs text-gray-400">
+                          Requisitos: {opp.requirements}
+                        </p>
+                      )}
+
+                      <div className="mt-5 space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          URL del curso
+                        </label>
+                        <input
+                          value={courseDraft[opp.id] ?? ""}
+                          onChange={(e) =>
+                            setCourseDraft((prev) => ({ ...prev, [opp.id]: e.target.value }))
+                          }
+                          placeholder="https://curso.com/modulo"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                        />
+                      </div>
+
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => saveCourse(opp.id)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50"
+                        >
+                          <BookCheck className="h-4 w-4" /> Guardar curso
+                        </button>
+                        <button
+                          onClick={() => publish(opp.id)}
+                          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98]"
+                        >
+                          <CheckCircle2 className="h-4 w-4" /> Publicar
+                        </button>
+                      </div>
+                    </motion.article>
+                  ))}
+                </motion.div>
+              )}
             </motion.div>
           )}
-        </AnimatePresence>
 
-        {/* ─── Tab Navigation ─── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="mb-8 flex gap-1 rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-1.5 backdrop-blur-xl"
-        >
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className="relative inline-flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-colors"
-            >
-              {activeTab === tab.key && (
-                <motion.div
-                  layoutId="admin-tab"
-                  className="absolute inset-0 rounded-xl border border-indigo-500/20 bg-indigo-500/10 shadow-[0_0_15px_rgba(99,102,241,0.08)]"
-                  transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
-                />
-              )}
-              <span
-                className={`relative z-10 inline-flex items-center gap-2 transition-colors duration-200 ${
-                  activeTab === tab.key ? "text-indigo-300" : "text-zinc-500 hover:text-zinc-300"
-                }`}
+          {/* ══════════ TAB: Metrics Dashboard ══════════ */}
+          {activeTab === "metrics" && metrics && (
+            <motion.div key="metrics" {...tabContent} className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Métricas de la plataforma</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Indicadores clave y embudo de conversión.
+                </p>
+              </div>
+
+              {/* KPI row */}
+              <motion.div
+                variants={stagger}
+                initial="initial"
+                animate="animate"
+                className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
               >
-                <tab.icon className="h-4 w-4" />
-                {tab.label}
-                {tab.count !== null && (
-                  <span className="rounded-full bg-zinc-800/80 px-2 py-0.5 text-[11px] tabular-nums">{tab.count}</span>
-                )}
-              </span>
-            </button>
-          ))}
-        </motion.div>
-
-        {loading ? (
-          <LoadingSkeleton />
-        ) : (
-          <AnimatePresence mode="wait">
-            {/* ══════ TAB: Pending Opportunities ══════ */}
-            {activeTab === "pending" && (
-              <motion.div key="pending" {...tabContent}>
-                {pending.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-16 text-center backdrop-blur-xl">
-                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800/50">
-                      <CheckCircle2 className="h-8 w-8 text-emerald-500/60" />
+                {[
+                  { label: "Total Usuarios", value: metrics.total_users, icon: Users, color: "text-gray-900" },
+                  { label: "Estudiantes", value: metrics.total_students, icon: Users, color: "text-indigo-600" },
+                  { label: "Empresas", value: metrics.total_companies, icon: Users, color: "text-violet-600" },
+                  { label: "Unlock Rate", value: metrics.unlock_rate_percent, icon: TrendingUp, color: "text-emerald-600", suffix: "%" },
+                ].map((kpi) => (
+                  <motion.div
+                    key={kpi.label}
+                    variants={fadeUp}
+                    className="overflow-hidden rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50">
+                        <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
+                      </div>
+                      <div>
+                        <p className={`text-2xl font-bold tabular-nums ${kpi.color}`}>
+                          <AnimatedNumber value={kpi.value} />
+                          {kpi.suffix || ""}
+                        </p>
+                        <p className="text-xs text-gray-500">{kpi.label}</p>
+                      </div>
                     </div>
-                    <p className="text-zinc-500">No hay oportunidades pendientes de revisión.</p>
-                  </div>
-                ) : (
-                  <motion.div variants={stagger} initial="initial" animate="animate" className="grid gap-5 lg:grid-cols-2">
-                    {pending.map((opp) => (
-                      <motion.article
-                        key={opp.id}
-                        variants={fadeUp}
-                        className="card-glow group relative overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-6 backdrop-blur-xl"
-                      >
-                        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-amber-500/0 to-transparent transition-all duration-500 group-hover:via-amber-500/40" />
-                        <h2 className="text-lg font-semibold text-white">{opp.title}</h2>
-                        <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-zinc-300/80">{opp.description}</p>
-                        {opp.requirements && (
-                          <p className="mt-1 text-xs text-zinc-500">Requisitos: {opp.requirements}</p>
-                        )}
-
-                        <div className="mt-5 space-y-2">
-                          <label className="text-xs uppercase tracking-wider text-zinc-500">URL del curso</label>
-                          <input
-                            value={courseDraft[opp.id] ?? ""}
-                            onChange={(e) => setCourseDraft((prev) => ({ ...prev, [opp.id]: e.target.value }))}
-                            placeholder="https://curso.com/modulo"
-                            className="w-full rounded-xl border border-zinc-700/60 bg-zinc-950/80 px-4 py-2.5 text-sm outline-none transition-all focus:border-indigo-400/50 focus:shadow-[0_0_15px_rgba(99,102,241,0.1)]"
-                          />
-                        </div>
-
-                        <div className="mt-5 flex flex-wrap gap-2">
-                          <button
-                            onClick={() => saveCourse(opp.id)}
-                            className="inline-flex items-center gap-2 rounded-xl border border-zinc-700/60 bg-zinc-950/80 px-4 py-2.5 text-xs font-semibold text-zinc-200 transition-all hover:border-indigo-400/40 hover:shadow-[0_0_15px_rgba(99,102,241,0.15)]"
-                          >
-                            <BookCheck className="h-4 w-4" /> Guardar curso
-                          </button>
-                          <button
-                            onClick={() => publish(opp.id)}
-                            className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2.5 text-xs font-semibold text-white transition-all hover:bg-indigo-400 hover:shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:scale-[1.02] active:scale-[0.98]"
-                          >
-                            <CheckCircle2 className="h-4 w-4" /> Publicar
-                          </button>
-                        </div>
-                      </motion.article>
-                    ))}
                   </motion.div>
-                )}
+                ))}
               </motion.div>
-            )}
 
-            {/* ══════ TAB: Metrics Dashboard ══════ */}
-            {activeTab === "metrics" && metrics && (
-              <motion.div key="metrics" {...tabContent} className="space-y-6">
-                {/* KPI row */}
-                <motion.div variants={stagger} initial="initial" animate="animate" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Opportunity metrics */}
+              <motion.div
+                {...fadeUp}
+                className="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+              >
+                <h3 className="text-base font-semibold text-gray-900">
+                  Oportunidades (últimos {metrics.window_days} días)
+                </h3>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {[
-                    { label: "Total Usuarios", value: metrics.total_users, icon: Users, color: "text-white" },
-                    { label: "Estudiantes", value: metrics.total_students, icon: Users, color: "text-indigo-400" },
-                    { label: "Empresas", value: metrics.total_companies, icon: Users, color: "text-violet-400" },
-                    { label: "Unlock Rate", value: metrics.unlock_rate_percent, icon: TrendingUp, color: "text-emerald-400", suffix: "%" },
-                  ].map((kpi) => (
-                    <motion.div
-                      key={kpi.label}
-                      variants={fadeUp}
-                      className="card-glow group relative overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-5 backdrop-blur-xl"
+                    { label: "Creadas", value: metrics.opportunities_created, color: "text-gray-900" },
+                    { label: "Publicadas", value: metrics.opportunities_published, color: "text-emerald-600" },
+                    { label: "Pendientes ahora", value: metrics.pending_opportunities, color: "text-amber-600" },
+                    { label: "Publicadas ahora", value: metrics.published_opportunities, color: "text-indigo-600" },
+                  ].map((m) => (
+                    <div
+                      key={m.label}
+                      className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-center"
                     >
-                      <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-zinc-700/0 to-transparent transition-all duration-500 group-hover:via-zinc-600/50" />
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/50">
-                          <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
-                        </div>
-                        <div>
-                          <p className={`text-2xl font-bold tabular-nums ${kpi.color}`}>
-                            <AnimatedNumber value={kpi.value} />{kpi.suffix || ""}
-                          </p>
-                          <p className="text-xs text-zinc-500">{kpi.label}</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
-
-                {/* Opportunity metrics */}
-                <motion.div
-                  {...fadeUp}
-                  className="relative overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-6 backdrop-blur-xl"
-                >
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent" />
-                  <h3 className="text-lg font-semibold text-white">Oportunidades (últimos {metrics.window_days} días)</h3>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {[
-                      { label: "Creadas", value: metrics.opportunities_created, color: "text-zinc-200" },
-                      { label: "Publicadas", value: metrics.opportunities_published, color: "text-emerald-400" },
-                      { label: "Pendientes ahora", value: metrics.pending_opportunities, color: "text-amber-400" },
-                      { label: "Publicadas ahora", value: metrics.published_opportunities, color: "text-indigo-400" },
-                    ].map((m) => (
-                      <div key={m.label} className="card-glow rounded-xl border border-zinc-700/40 bg-zinc-800/30 p-4 text-center">
-                        <p className={`text-3xl font-bold tabular-nums ${m.color}`}>
-                          <AnimatedNumber value={m.value} />
-                        </p>
-                        <p className="mt-1 text-xs text-zinc-500">{m.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-
-                {/* Funnel metrics */}
-                <motion.div
-                  {...fadeUp}
-                  className="relative overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-6 backdrop-blur-xl"
-                >
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
-                  <h3 className="text-lg font-semibold text-white">Funnel de Postulación</h3>
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                    {[
-                      { label: "Cursos completados", value: metrics.course_completions },
-                      { label: "Intentos de postulación", value: metrics.apply_attempts },
-                      { label: "Postulaciones exitosas", value: metrics.apply_success, color: "text-emerald-400" },
-                      { label: "Bloqueadas", value: metrics.apply_blocked, color: "text-rose-400" },
-                      { label: "Tasa de éxito", value: metrics.apply_success_rate_percent, color: "text-indigo-400", suffix: "%" },
-                    ].map((m) => (
-                      <div key={m.label} className="card-glow rounded-xl border border-zinc-700/40 bg-zinc-800/30 p-4 text-center">
-                        <p className={`text-2xl font-bold tabular-nums ${m.color || "text-white"}`}>
-                          <AnimatedNumber value={m.value} />{m.suffix || ""}
-                        </p>
-                        <p className="mt-1 text-xs text-zinc-500">{m.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-
-                {/* Visual funnel */}
-                <motion.div
-                  {...fadeUp}
-                  className="relative overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-6 backdrop-blur-xl"
-                >
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
-                  <h3 className="text-lg font-semibold text-white">Embudo visual</h3>
-                  <div className="mt-5 space-y-4">
-                    {[
-                      { label: "Usuarios registrados", value: metrics.total_users, max: metrics.total_users },
-                      { label: "Cursos completados", value: metrics.course_completions, max: metrics.total_users },
-                      { label: "Postulaciones exitosas", value: metrics.apply_success, max: metrics.total_users },
-                    ].map((step, i) => {
-                      const pct = step.max > 0 ? Math.round((step.value / step.max) * 100) : 0;
-                      return (
-                        <div key={step.label}>
-                          <div className="mb-1.5 flex justify-between text-xs text-zinc-500">
-                            <span>{step.label}</span>
-                            <span className="tabular-nums">
-                              {step.value} ({pct}%)
-                            </span>
-                          </div>
-                          <div className="h-3 overflow-hidden rounded-full bg-zinc-800/80">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${Math.max(pct, 2)}%` }}
-                              transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 + i * 0.15 }}
-                              className="h-full rounded-full bg-gradient-to-r from-indigo-600 via-violet-500 to-indigo-400"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-
-            {/* ══════ TAB: Users ══════ */}
-            {activeTab === "users" && (
-              <motion.div key="users" {...tabContent}>
-                <div className="mb-5 flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-zinc-500">Filtrar:</span>
-                  {["", "student", "company", "admin"].map((filter) => (
-                    <button
-                      key={filter}
-                      onClick={() => setUserFilter(filter)}
-                      className={`rounded-xl px-4 py-2 text-xs font-medium transition-all ${
-                        userFilter === filter
-                          ? "bg-indigo-500/15 text-indigo-300 shadow-[0_0_10px_rgba(99,102,241,0.1)]"
-                          : "bg-zinc-800/50 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-                      }`}
-                    >
-                      {filter || "Todos"} ({filter ? users.filter((u) => u.role === filter).length : users.length})
-                    </button>
+                      <p className={`text-3xl font-bold tabular-nums ${m.color}`}>
+                        <AnimatedNumber value={m.value} />
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">{m.label}</p>
+                    </div>
                   ))}
                 </div>
+              </motion.div>
 
-                {filteredUsers.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-12 text-center backdrop-blur-xl">
-                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800/50">
-                      <Users className="h-8 w-8 text-zinc-600" />
+              {/* Funnel metrics */}
+              <motion.div
+                {...fadeUp}
+                className="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+              >
+                <h3 className="text-base font-semibold text-gray-900">Funnel de Postulación</h3>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                  {[
+                    { label: "Cursos completados", value: metrics.course_completions },
+                    { label: "Intentos de postulación", value: metrics.apply_attempts },
+                    { label: "Postulaciones exitosas", value: metrics.apply_success, color: "text-emerald-600" },
+                    { label: "Bloqueadas", value: metrics.apply_blocked, color: "text-rose-600" },
+                    { label: "Tasa de éxito", value: metrics.apply_success_rate_percent, color: "text-indigo-600", suffix: "%" },
+                  ].map((m) => (
+                    <div
+                      key={m.label}
+                      className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-center"
+                    >
+                      <p className={`text-2xl font-bold tabular-nums ${m.color || "text-gray-900"}`}>
+                        <AnimatedNumber value={m.value} />
+                        {m.suffix || ""}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">{m.label}</p>
                     </div>
-                    <p className="text-zinc-500">No hay usuarios con ese filtro.</p>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Visual funnel */}
+              <motion.div
+                {...fadeUp}
+                className="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+              >
+                <h3 className="text-base font-semibold text-gray-900">Embudo visual</h3>
+                <div className="mt-5 space-y-4">
+                  {[
+                    { label: "Usuarios registrados", value: metrics.total_users, max: metrics.total_users },
+                    { label: "Cursos completados", value: metrics.course_completions, max: metrics.total_users },
+                    { label: "Postulaciones exitosas", value: metrics.apply_success, max: metrics.total_users },
+                  ].map((step, i) => {
+                    const pct = step.max > 0 ? Math.round((step.value / step.max) * 100) : 0;
+                    return (
+                      <div key={step.label}>
+                        <div className="mb-1.5 flex justify-between text-xs text-gray-500">
+                          <span className="font-medium">{step.label}</span>
+                          <span className="tabular-nums">
+                            {step.value} ({pct}%)
+                          </span>
+                        </div>
+                        <div className="h-3 overflow-hidden rounded-full bg-gray-100">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.max(pct, 2)}%` }}
+                            transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 + i * 0.15 }}
+                            className="h-full rounded-full bg-gradient-to-r from-indigo-600 via-violet-500 to-indigo-500"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* ══════════ TAB: Users ══════════ */}
+          {activeTab === "users" && (
+            <motion.div key="users" {...tabContent}>
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900">Gestión de Usuarios</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Todos los usuarios registrados en la plataforma.
+                </p>
+              </div>
+
+              {/* Filter chips */}
+              <div className="mb-5 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-gray-500">Filtrar:</span>
+                {["", "student", "company", "admin"].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setUserFilter(filter)}
+                    className={`rounded-lg px-3.5 py-2 text-xs font-medium transition-all ${
+                      userFilter === filter
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {filter || "Todos"} (
+                    {filter ? users.filter((u) => u.role === filter).length : users.length})
+                  </button>
+                ))}
+              </div>
+
+              {filteredUsers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-gray-100">
+                    <Users className="h-7 w-7 text-gray-400" />
                   </div>
-                ) : (
-                  <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-2">
+                  <p className="text-sm text-gray-500">No hay usuarios con ese filtro.</p>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                  {/* Desktop table */}
+                  <div className="hidden sm:block">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50/80">
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                            ID
+                          </th>
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                            Email
+                          </th>
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                            Nombre
+                          </th>
+                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                            Rol
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredUsers.map((u, idx) => (
+                          <tr
+                            key={u.id}
+                            className={`transition-colors hover:bg-gray-50 ${idx % 2 === 1 ? "bg-gray-50/50" : ""}`}
+                          >
+                            <td className="px-6 py-4 tabular-nums text-gray-400 font-mono text-xs">
+                              {u.id}
+                            </td>
+                            <td className="px-6 py-4 font-medium text-gray-900">{u.email}</td>
+                            <td className="px-6 py-4 text-gray-500">
+                              {u.profile_data?.first_name
+                                ? `${u.profile_data.first_name} ${u.profile_data.last_name || ""}`
+                                : u.profile_data?.company_name || "—"}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                                  roleBadge[u.role] || "bg-gray-50 text-gray-500 border-gray-200"
+                                }`}
+                              >
+                                {u.role}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile list */}
+                  <div className="divide-y divide-gray-100 sm:hidden">
                     {filteredUsers.map((u) => (
-                      <motion.div
-                        key={u.id}
-                        variants={fadeUp}
-                        className="card-glow group flex items-center justify-between rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-4 backdrop-blur-xl"
-                      >
+                      <div key={u.id} className="flex items-center justify-between px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800/60 text-xs font-bold tabular-nums text-zinc-400 transition-colors group-hover:bg-zinc-800 group-hover:text-zinc-300">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-xs font-bold tabular-nums text-gray-500">
                             {u.id}
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-white">{u.email}</p>
+                            <p className="text-sm font-medium text-gray-900">{u.email}</p>
                             {u.profile_data?.first_name && (
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-gray-500">
                                 {u.profile_data.first_name} {u.profile_data.last_name || ""}
                               </p>
                             )}
                             {u.profile_data?.company_name && (
-                              <p className="text-xs text-zinc-500">{u.profile_data.company_name}</p>
+                              <p className="text-xs text-gray-500">{u.profile_data.company_name}</p>
                             )}
                           </div>
                         </div>
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${roleBadge[u.role] || "bg-zinc-800 text-zinc-400"}`}
+                          className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                            roleBadge[u.role] || "bg-gray-50 text-gray-500 border-gray-200"
+                          }`}
                         >
                           {u.role}
                         </span>
-                      </motion.div>
+                      </div>
                     ))}
-                  </motion.div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        )}
-      </main>
-    </div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+    </DashboardLayout>
   );
 }
