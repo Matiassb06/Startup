@@ -268,6 +268,11 @@ export default function StudentDashboard() {
                           <div className="min-w-0 flex-1">
                             <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100">{opp.title}</h3>
                             <p className="mt-0.5 text-sm text-gray-500 dark:text-zinc-500">{opp.company_name}</p>
+                            {opp.course_name && (
+                              <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                                <GraduationCap className="h-3.5 w-3.5" /> Curso: {opp.course_name}
+                              </p>
+                            )}
                           </div>
                           <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
                             opp.course_completed
@@ -367,6 +372,11 @@ export default function StudentDashboard() {
                               {opp.title}
                             </h3>
                             <p className="mt-0.5 text-sm text-gray-500 dark:text-zinc-500">{opp.company_name}</p>
+                            {opp.course_name && (
+                              <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                                <GraduationCap className="h-3.5 w-3.5" /> Curso: {opp.course_name}
+                              </p>
+                            )}
                           </div>
                           <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
                             opp.already_applied
@@ -413,7 +423,7 @@ export default function StudentDashboard() {
                         </div>
 
                         {/* Actions */}
-                        <div className="mt-5 flex flex-wrap gap-2">
+                        <div className="mt-5 flex flex-wrap items-center gap-3">
                           {!opp.already_applied && (
                             <button
                               disabled={!canApply}
@@ -426,6 +436,12 @@ export default function StudentDashboard() {
                             >
                               <Send className="h-3.5 w-3.5" /> Postular
                             </button>
+                          )}
+                          {!canApply && !opp.already_applied && opp.course_id && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400">
+                              <ShieldAlert className="mr-1 inline h-3.5 w-3.5" />
+                              Completa el curso obligatorio para desbloquear tu postulación.
+                            </p>
                           )}
                         </div>
                       </motion.article>

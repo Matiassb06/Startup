@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   TrendingUp,
   Users,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -82,11 +83,16 @@ export default function AdminDashboard() {
   const [pending, setPending] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [users, setUsers] = useState([]);
-  const [courseDraft, setCourseDraft] = useState({});
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState({ type: "", message: "" });
   const [activeTab, setActiveTab] = useState("pending");
   const [userFilter, setUserFilter] = useState("");
+
+  /* ── Modal de publicación con curso obligatorio ── */
+  const [publishModal, setPublishModal] = useState(null); // opp object or null
+  const [courseName, setCourseName] = useState("");
+  const [courseUrl, setCourseUrl] = useState("");
+  const [publishing, setPublishing] = useState(false);
 
   const loadData = async () => {
     try {
@@ -111,30 +117,30 @@ export default function AdminDashboard() {
     loadData();
   }, []);
 
-  const saveCourse = async (opportunityId) => {
-    const contentUrl = (courseDraft[opportunityId] || "").trim();
-    if (!contentUrl) {
-      setStatus({ type: "error", message: "Debes ingresar URL del curso." });
+  const openPublishModal = (opp) => {
+    setPublishModal(opp);
+    setCourseName("");
+    setCourseUrl("");
+  };
+
+  const confirmPublish = async () => {
+    if (!courseName.trim() || !courseUrl.trim()) {
+      setStatus({ type: "error", message: "Debes completar nombre y URL del curso." });
       return;
     }
     try {
-      await api.patch(`/admin/opportunities/${opportunityId}/course`, {
-        content_url: contentUrl,
-        quiz_data: {},
+      setPublishing(true);
+      await api.patch(`/admin/opportunities/${publishModal.id}/publish`, {
+        course_name: courseName.trim(),
+        course_url: courseUrl.trim(),
       });
-      setStatus({ type: "success", message: "Curso asociado correctamente." });
-    } catch (error) {
-      setStatus({ type: "error", message: error.message || "Error guardando curso." });
-    }
-  };
-
-  const publish = async (opportunityId) => {
-    try {
-      await api.patch(`/admin/opportunities/${opportunityId}/publish`, {});
+      setPublishModal(null);
       await loadData();
-      setStatus({ type: "success", message: "Oportunidad publicada." });
+      setStatus({ type: "success", message: "Oportunidad publicada con curso obligatorio." });
     } catch (error) {
       setStatus({ type: "error", message: error.message || "Error al publicar." });
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -227,28 +233,12 @@ export default function AdminDashboard() {
                         <p className="mt-1 text-xs text-gray-400 dark:text-zinc-600">Requisitos: {opp.requirements}</p>
                       )}
 
-                      <div className="mt-5 space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">URL del curso</label>
-                        <input
-                          value={courseDraft[opp.id] ?? ""}
-                          onChange={(e) => setCourseDraft((prev) => ({ ...prev, [opp.id]: e.target.value }))}
-                          placeholder="https://curso.com/modulo"
-                          className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
-                        />
-                      </div>
-
                       <div className="mt-5 flex flex-wrap gap-2">
                         <button
-                          onClick={() => saveCourse(opp.id)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-gray-700 dark:text-zinc-300 transition-all hover:bg-gray-200 dark:hover:bg-white/[0.06]"
-                        >
-                          <BookCheck className="h-4 w-4" /> Guardar curso
-                        </button>
-                        <button
-                          onClick={() => publish(opp.id)}
+                          onClick={() => openPublishModal(opp)}
                           className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98]"
                         >
-                          <CheckCircle2 className="h-4 w-4" /> Publicar
+                          <CheckCircle2 className="h-4 w-4" /> Aprobar y asignar curso
                         </button>
                       </div>
                     </motion.article>
@@ -471,6 +461,97 @@ export default function AdminDashboard() {
           )}
         </AnimatePresence>
       )}
+
+      {/* ═══════ Modal: Asignar curso y publicar ═══════ */}
+      <AnimatePresence>
+        {publishModal && (
+          <motion.div
+            key="publish-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setPublishModal(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 shadow-2xl"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-zinc-100">Asignar curso obligatorio</h3>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500">
+                    El estudiante deberá completar este curso antes de poder postular.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setPublishModal(null)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Opportunity info */}
+              <div className="px-6 pt-5">
+                <div className="rounded-lg border border-gray-200 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.02] p-3">
+                  <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">{publishModal.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-zinc-500">{publishModal.description}</p>
+                </div>
+              </div>
+
+              {/* Form fields */}
+              <div className="space-y-4 px-6 pt-5 pb-6">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    Nombre del curso <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    value={courseName}
+                    onChange={(e) => setCourseName(e.target.value)}
+                    placeholder="Ej: Fundamentos de React"
+                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    URL del contenido <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    value={courseUrl}
+                    onChange={(e) => setCourseUrl(e.target.value)}
+                    placeholder="https://curso.com/modulo"
+                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                <button
+                  onClick={() => setPublishModal(null)}
+                  className="rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-gray-700 dark:text-zinc-300 transition-all hover:bg-gray-200 dark:hover:bg-white/[0.06]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmPublish}
+                  disabled={publishing || !courseName.trim() || !courseUrl.trim()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {publishing ? "Publicando…" : "Publicar oportunidad"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

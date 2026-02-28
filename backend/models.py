@@ -76,6 +76,7 @@ class Course(Base):
         nullable=False,
         unique=True,
     )
+    name = Column(String(255), nullable=False, server_default=text("'Curso obligatorio'"))
     content_url = Column(Text, nullable=False)
     quiz_data = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
 

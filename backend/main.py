@@ -143,6 +143,7 @@ class StudentOpportunityOut(StrictModel):
     company_name: str
     status: models.OpportunityStatus
     course_id: Optional[int] = None
+    course_name: Optional[str] = None
     course_content_url: Optional[str] = None
     progress_percent: int
     course_completed: bool
@@ -152,6 +153,7 @@ class StudentOpportunityOut(StrictModel):
 
 # ── Course ──
 class AdminCourseUpsertIn(StrictModel):
+    name: str = Field(min_length=3, max_length=255)
     content_url: str
     quiz_data: dict = Field(default_factory=dict)
 
@@ -164,9 +166,24 @@ class AdminCourseUpsertIn(StrictModel):
         return normalized
 
 
+class PublishWithCourseIn(StrictModel):
+    """Datos obligatorios del curso al publicar una oportunidad."""
+    course_name: str = Field(min_length=3, max_length=255)
+    course_url: str
+
+    @field_validator("course_url")
+    @classmethod
+    def validate_course_url(cls, value: str) -> str:
+        normalized = value.strip()
+        if not (normalized.startswith("http://") or normalized.startswith("https://")):
+            raise ValueError("course_url debe iniciar con http:// o https://")
+        return normalized
+
+
 class CourseOut(StrictModel):
     id: int
     opportunity_id: int
+    name: str
     content_url: str
     quiz_data: dict
 
@@ -476,6 +493,7 @@ def read_student_opportunities(
                 company_name=_company_display_name(opp.company) if opp.company else f"Company {opp.company_id}",
                 status=opp.status,
                 course_id=course.id if course else None,
+                course_name=course.name if course else None,
                 course_content_url=course.content_url if course else None,
                 progress_percent=100 if is_completed else 0,
                 course_completed=is_completed,
@@ -752,6 +770,7 @@ def read_pending_opportunities(
 @app.patch("/admin/opportunities/{opportunity_id}/publish", response_model=OpportunityOut)
 def publish_opportunity(
     opportunity_id: int,
+    payload: PublishWithCourseIn,
     current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
     db: Session = Depends(database.get_db),
 ):
@@ -762,6 +781,28 @@ def publish_opportunity(
         raise HTTPException(status_code=400, detail="No se puede publicar una oportunidad cerrada")
     if opportunity.status == models.OpportunityStatus.published:
         return opportunity
+
+    # Crear o actualizar el curso obligatorio
+    course = db.query(models.Course).filter(models.Course.opportunity_id == opportunity_id).first()
+    if not course:
+        course = models.Course(
+            opportunity_id=opportunity_id,
+            name=payload.course_name,
+            content_url=payload.course_url,
+        )
+        db.add(course)
+        db.flush()
+    else:
+        course.name = payload.course_name
+        course.content_url = payload.course_url
+
+    _log_event(
+        db, "course_upserted",
+        user_id=current_user.id,
+        opportunity_id=opportunity_id,
+        course_id=course.id,
+        payload={"course_name": payload.course_name, "content_url": payload.course_url},
+    )
 
     opportunity.status = models.OpportunityStatus.published
     _log_event(db, "opportunity_published", user_id=current_user.id, opportunity_id=opportunity.id, payload={"status": "published"})
@@ -783,18 +824,19 @@ def upsert_opportunity_course(
 
     course = db.query(models.Course).filter(models.Course.opportunity_id == opportunity_id).first()
     if not course:
-        course = models.Course(opportunity_id=opportunity_id, content_url=payload.content_url, quiz_data=payload.quiz_data)
+        course = models.Course(opportunity_id=opportunity_id, name=payload.name, content_url=payload.content_url, quiz_data=payload.quiz_data)
         db.add(course)
         db.flush()
     else:
+        course.name = payload.name
         course.content_url = payload.content_url
         course.quiz_data = payload.quiz_data
 
-    _log_event(db, "course_upserted", user_id=current_user.id, opportunity_id=opportunity_id, course_id=course.id, payload={"content_url": payload.content_url})
+    _log_event(db, "course_upserted", user_id=current_user.id, opportunity_id=opportunity_id, course_id=course.id, payload={"name": payload.name, "content_url": payload.content_url})
     db.commit()
     db.refresh(course)
 
-    return CourseOut(id=course.id, opportunity_id=course.opportunity_id, content_url=course.content_url, quiz_data=course.quiz_data or {})
+    return CourseOut(id=course.id, opportunity_id=course.opportunity_id, name=course.name, content_url=course.content_url, quiz_data=course.quiz_data or {})
 
 
 @app.get("/admin/metrics/summary", response_model=MetricsSummaryOut)
