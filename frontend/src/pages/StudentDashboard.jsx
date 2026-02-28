@@ -67,14 +67,14 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const session = getSession();
-    if (!session?.access_token || session.user?.role !== "student") {
+    if (!session?.access_token || session?.role !== "student") {
       navigate("/login");
       return;
     }
     (async () => {
       try {
         const [profileData, oppsData, appsData] = await Promise.all([
-          api.get("/student/profile"),
+          api.get("/auth/me"),
           api.get("/student/opportunities"),
           api.get("/student/applications"),
         ]);
@@ -91,7 +91,7 @@ export default function StudentDashboard() {
 
   const completeCourse = async (opp) => {
     try {
-      await api.post("/student/complete-course", { course_id: opp.course_id });
+      await api.post(`/student/courses/${opp.course_id}/complete`, {});
       const oppsData = await api.get("/student/opportunities");
       setOpportunities(Array.isArray(oppsData) ? oppsData : []);
       setStatus({ type: "success", message: "Curso completado. Postulación desbloqueada." });

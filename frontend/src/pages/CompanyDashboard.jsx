@@ -77,7 +77,7 @@ export default function CompanyDashboard() {
     try {
       setLoading(true);
       const [profileData, oppsData, statsData] = await Promise.all([
-        api.get("/company/profile"),
+        api.get("/auth/me"),
         api.get("/company/opportunities"),
         api.get("/company/stats"),
       ]);
@@ -93,7 +93,7 @@ export default function CompanyDashboard() {
 
   useEffect(() => {
     const session = getSession();
-    if (!session?.access_token || session.user?.role !== "company") {
+    if (!session?.access_token || session?.role !== "company") {
       navigate("/login");
       return;
     }

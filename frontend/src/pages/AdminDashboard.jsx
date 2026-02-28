@@ -74,13 +74,15 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       const [pendingData, metricsData, usersData] = await Promise.all([
-        api.get("/admin/pending-opportunities"),
-        api.get("/admin/metrics"),
+        api.get("/admin/opportunities/pending"),
+        api.get("/admin/metrics/summary"),
         api.get("/admin/users"),
       ]);
       setPending(Array.isArray(pendingData) ? pendingData : []);
       setMetrics(metricsData);
-      setUsers(Array.isArray(usersData) ? usersData : []);
+      // /admin/users returns paginated {items:[...], total, ...}
+      const usersList = usersData?.items ?? usersData;
+      setUsers(Array.isArray(usersList) ? usersList : []);
     } catch (error) {
       setStatus({ type: "error", message: error.message || "Error cargando datos." });
     } finally {
