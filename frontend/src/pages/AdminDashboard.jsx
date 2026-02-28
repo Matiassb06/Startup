@@ -3,6 +3,8 @@ import {
   BarChart3,
   BookCheck,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Clock3,
   GraduationCap,
   Pencil,
@@ -82,6 +84,65 @@ function ComingSoon({ icon: Icon, title, description }) {
   );
 }
 
+/* ───── Module Accordion (Course Builder) ───── */
+function ModuleAccordion({ mod, mi, updateModule, removeModule, addTopic, removeTopic, updateTopic }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] overflow-hidden">
+      {/* Module header */}
+      <div className="flex items-center gap-2 bg-gray-50 dark:bg-white/[0.03] px-3 py-2">
+        <button type="button" onClick={() => setOpen((o) => !o)} className="text-gray-400 hover:text-gray-600 dark:hover:text-zinc-300 transition-colors">
+          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+        <input
+          value={mod.title}
+          onChange={(e) => updateModule(mi, "title", e.target.value)}
+          placeholder={`Módulo ${mi + 1}`}
+          className="flex-1 bg-transparent text-sm font-medium text-gray-800 dark:text-zinc-200 outline-none placeholder:text-gray-400 dark:placeholder:text-zinc-600"
+        />
+        <span className="text-[10px] text-gray-400 dark:text-zinc-600 shrink-0">{mod.topics.length} tema{mod.topics.length !== 1 ? "s" : ""}</span>
+        <button type="button" onClick={() => removeModule(mi)} className="rounded p-1 text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-500 transition-colors" title="Eliminar módulo">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Topics */}
+      {open && (
+        <div className="px-3 py-2 space-y-2">
+          {mod.topics.map((topic, ti) => (
+            <div key={ti} className="flex items-start gap-2 rounded-md border border-gray-100 dark:border-white/[0.05] bg-gray-50/50 dark:bg-white/[0.01] p-2">
+              <div className="flex-1 space-y-1.5">
+                <input
+                  value={topic.title}
+                  onChange={(e) => updateTopic(mi, ti, "title", e.target.value)}
+                  placeholder="Título del tema"
+                  className="w-full bg-transparent text-xs font-medium text-gray-700 dark:text-zinc-300 outline-none placeholder:text-gray-400 dark:placeholder:text-zinc-600"
+                />
+                <input
+                  value={topic.content_url}
+                  onChange={(e) => updateTopic(mi, ti, "content_url", e.target.value)}
+                  placeholder="https://recurso.com/video"
+                  className="w-full bg-transparent text-xs text-gray-500 dark:text-zinc-400 outline-none placeholder:text-gray-400 dark:placeholder:text-zinc-600"
+                />
+              </div>
+              <button type="button" onClick={() => removeTopic(mi, ti)} className="mt-0.5 shrink-0 rounded p-1 text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-500 transition-colors" title="Eliminar tema">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => addTopic(mi)}
+            className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors py-1"
+          >
+            <Plus className="h-3 w-3" /> Agregar tema
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [pending, setPending] = useState([]);
@@ -99,9 +160,10 @@ export default function AdminDashboard() {
   const [publishing, setPublishing] = useState(false);
 
   /* ── Modal de crear/editar curso del catálogo ── */
-  const [courseModal, setCourseModal] = useState(null); // null | { mode: "create" } | { mode: "edit", course: {...} }
-  const [courseForm, setCourseForm] = useState({ name: "", description: "", content_url: "" });
+  const [courseModal, setCourseModal] = useState(null); // null | { mode: "create" } | { mode: "edit", courseId: number }
+  const [courseForm, setCourseForm] = useState({ name: "", description: "", modules: [] });
   const [savingCourse, setSavingCourse] = useState(false);
+  const [loadingCourse, setLoadingCourse] = useState(false);
 
   const loadData = async () => {
     try {
@@ -156,34 +218,93 @@ export default function AdminDashboard() {
   /* ── Catálogo CRUD ── */
   const openCreateCourse = () => {
     setCourseModal({ mode: "create" });
-    setCourseForm({ name: "", description: "", content_url: "" });
+    setCourseForm({ name: "", description: "", modules: [{ title: "M\u00f3dulo 1", order: 0, topics: [{ title: "", content_url: "", order: 0 }] }] });
   };
 
-  const openEditCourse = (course) => {
-    setCourseModal({ mode: "edit", course });
-    setCourseForm({ name: course.name, description: course.description || "", content_url: course.content_url });
+  const openEditCourse = async (course) => {
+    setCourseModal({ mode: "edit", courseId: course.id });
+    setLoadingCourse(true);
+    try {
+      const full = await api.get(`/admin/courses/${course.id}`);
+      setCourseForm({
+        name: full.name,
+        description: full.description || "",
+        modules: (full.modules || []).map((m) => ({
+          title: m.title, order: m.order,
+          topics: (m.topics || []).map((t) => ({ title: t.title, content_url: t.content_url, order: t.order })),
+        })),
+      });
+    } catch {
+      setStatus({ type: "error", message: "Error cargando datos del curso." });
+      setCourseModal(null);
+    } finally {
+      setLoadingCourse(false);
+    }
+  };
+
+  /* Helpers para manipular m\u00f3dulos/temas din\u00e1micamente */
+  const addModule = () => {
+    setCourseForm((f) => ({
+      ...f,
+      modules: [...f.modules, { title: `M\u00f3dulo ${f.modules.length + 1}`, order: f.modules.length, topics: [{ title: "", content_url: "", order: 0 }] }],
+    }));
+  };
+  const removeModule = (mi) => {
+    setCourseForm((f) => ({ ...f, modules: f.modules.filter((_, i) => i !== mi).map((m, i) => ({ ...m, order: i })) }));
+  };
+  const updateModule = (mi, field, value) => {
+    setCourseForm((f) => ({ ...f, modules: f.modules.map((m, i) => (i === mi ? { ...m, [field]: value } : m)) }));
+  };
+  const addTopic = (mi) => {
+    setCourseForm((f) => ({
+      ...f,
+      modules: f.modules.map((m, i) =>
+        i === mi ? { ...m, topics: [...m.topics, { title: "", content_url: "", order: m.topics.length }] } : m
+      ),
+    }));
+  };
+  const removeTopic = (mi, ti) => {
+    setCourseForm((f) => ({
+      ...f,
+      modules: f.modules.map((m, i) =>
+        i === mi ? { ...m, topics: m.topics.filter((_, j) => j !== ti).map((t, j) => ({ ...t, order: j })) } : m
+      ),
+    }));
+  };
+  const updateTopic = (mi, ti, field, value) => {
+    setCourseForm((f) => ({
+      ...f,
+      modules: f.modules.map((m, i) =>
+        i === mi ? { ...m, topics: m.topics.map((t, j) => (j === ti ? { ...t, [field]: value } : t)) } : m
+      ),
+    }));
   };
 
   const saveCourse = async () => {
-    if (!courseForm.name.trim() || !courseForm.content_url.trim()) {
-      setStatus({ type: "error", message: "Nombre y URL son obligatorios." });
+    if (!courseForm.name.trim()) {
+      setStatus({ type: "error", message: "El nombre del curso es obligatorio." });
       return;
     }
     try {
       setSavingCourse(true);
+      const payload = {
+        name: courseForm.name.trim(),
+        description: courseForm.description.trim() || null,
+        modules: courseForm.modules.map((m, mi) => ({
+          title: m.title.trim(),
+          order: mi,
+          topics: m.topics.map((t, ti) => ({
+            title: t.title.trim(),
+            content_url: t.content_url.trim(),
+            order: ti,
+          })),
+        })),
+      };
       if (courseModal.mode === "create") {
-        await api.post("/admin/courses", {
-          name: courseForm.name.trim(),
-          description: courseForm.description.trim() || null,
-          content_url: courseForm.content_url.trim(),
-        });
+        await api.post("/admin/courses", payload);
         setStatus({ type: "success", message: "Curso creado en el cat\u00e1logo." });
       } else {
-        await api.patch(`/admin/courses/${courseModal.course.id}`, {
-          name: courseForm.name.trim(),
-          description: courseForm.description.trim() || null,
-          content_url: courseForm.content_url.trim(),
-        });
+        await api.patch(`/admin/courses/${courseModal.courseId}`, payload);
         setStatus({ type: "success", message: "Curso actualizado." });
       }
       setCourseModal(null);
@@ -343,7 +464,8 @@ export default function AdminDashboard() {
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02]">
                           <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Nombre</th>
-                          <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">URL</th>
+                          <th className="px-6 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Módulos</th>
+                          <th className="px-6 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Temas</th>
                           <th className="px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Descripción</th>
                           <th className="px-6 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-zinc-500">Acciones</th>
                         </tr>
@@ -352,11 +474,8 @@ export default function AdminDashboard() {
                         {catalogCourses.map((c) => (
                           <tr key={c.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.02]">
                             <td className="px-6 py-4 font-medium text-gray-800 dark:text-zinc-200">{c.name}</td>
-                            <td className="px-6 py-4">
-                              <a href={c.content_url} target="_blank" rel="noreferrer" className="text-emerald-600 dark:text-emerald-400 hover:underline truncate block max-w-xs text-xs">
-                                {c.content_url}
-                              </a>
-                            </td>
+                            <td className="px-6 py-4 text-center text-xs text-gray-600 dark:text-zinc-400">{c.module_count ?? 0}</td>
+                            <td className="px-6 py-4 text-center text-xs text-gray-600 dark:text-zinc-400">{c.topic_count ?? 0}</td>
                             <td className="px-6 py-4 text-gray-500 dark:text-zinc-400 text-xs max-w-xs truncate">{c.description || "—"}</td>
                             <td className="px-6 py-4 text-right">
                               <div className="inline-flex items-center gap-1">
@@ -388,9 +507,9 @@ export default function AdminDashboard() {
                       <div key={c.id} className="flex items-center justify-between px-4 py-4">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-800 dark:text-zinc-200">{c.name}</p>
-                          <a href={c.content_url} target="_blank" rel="noreferrer" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline truncate block">
-                            {c.content_url}
-                          </a>
+                          <p className="text-xs text-gray-500 dark:text-zinc-500">
+                            {c.module_count ?? 0} módulos · {c.topic_count ?? 0} temas
+                          </p>
                         </div>
                         <div className="inline-flex items-center gap-1 ml-3 shrink-0">
                           <button onClick={() => openEditCourse(c)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors" title="Editar">
@@ -692,9 +811,9 @@ export default function AdminDashboard() {
                     <div className="mt-3 rounded-lg border border-gray-200 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.02] p-3">
                       <p className="text-xs font-medium text-gray-700 dark:text-zinc-300">{sel.name}</p>
                       {sel.description && <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500">{sel.description}</p>}
-                      <a href={sel.content_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-emerald-600 dark:text-emerald-400 hover:underline truncate max-w-full">
-                        {sel.content_url}
-                      </a>
+                      <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+                        {sel.module_count ?? 0} módulos · {sel.topic_count ?? 0} temas
+                      </p>
                     </div>
                   ) : null;
                 })()}
@@ -739,7 +858,7 @@ export default function AdminDashboard() {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 shadow-2xl"
+              className="w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 shadow-2xl"
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/[0.06] px-6 py-4">
@@ -754,61 +873,97 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
-              {/* Form */}
-              <div className="space-y-4 px-6 pt-5 pb-6">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                    Nombre <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    value={courseForm.name}
-                    onChange={(e) => setCourseForm((f) => ({ ...f, name: e.target.value }))}
-                    placeholder="Ej: Fundamentos de React"
-                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                    URL del contenido <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    value={courseForm.content_url}
-                    onChange={(e) => setCourseForm((f) => ({ ...f, content_url: e.target.value }))}
-                    placeholder="https://curso.com/modulo"
-                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                    Descripción <span className="text-xs font-normal text-gray-400 dark:text-zinc-600">(opcional)</span>
-                  </label>
-                  <textarea
-                    value={courseForm.description}
-                    onChange={(e) => setCourseForm((f) => ({ ...f, description: e.target.value }))}
-                    rows={3}
-                    placeholder="Breve descripción del curso…"
-                    className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30 resize-none"
-                  />
-                </div>
+              {/* Course Builder Form */}
+              <div className="space-y-4 px-6 pt-5 pb-6 max-h-[70vh] overflow-y-auto">
+                {loadingCourse ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCcw className="h-5 w-5 animate-spin text-emerald-500" />
+                    <span className="ml-2 text-sm text-gray-500 dark:text-zinc-400">Cargando…</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Course name */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                        Nombre del curso <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        value={courseForm.name}
+                        onChange={(e) => setCourseForm((f) => ({ ...f, name: e.target.value }))}
+                        placeholder="Ej: Fundamentos de React"
+                        className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                        Descripción <span className="text-xs font-normal text-gray-400 dark:text-zinc-600">(opcional)</span>
+                      </label>
+                      <textarea
+                        value={courseForm.description}
+                        onChange={(e) => setCourseForm((f) => ({ ...f, description: e.target.value }))}
+                        rows={2}
+                        placeholder="Breve descripción del curso…"
+                        className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 outline-none transition-all placeholder:text-gray-400 dark:placeholder:text-zinc-600 focus:border-emerald-400 dark:focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-200 dark:focus:ring-emerald-500/30 resize-none"
+                      />
+                    </div>
+
+                    {/* Modules & Topics */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-medium text-gray-700 dark:text-zinc-300">Módulos y Temas</label>
+                        <button
+                          type="button"
+                          onClick={addModule}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
+                        >
+                          <Plus className="h-3.5 w-3.5" /> Módulo
+                        </button>
+                      </div>
+
+                      {courseForm.modules.length === 0 && (
+                        <p className="text-xs text-gray-400 dark:text-zinc-600 text-center py-4">Sin módulos. Agrega al menos uno.</p>
+                      )}
+
+                      <div className="space-y-3">
+                        {courseForm.modules.map((mod, mi) => (
+                          <ModuleAccordion
+                            key={mi}
+                            mod={mod}
+                            mi={mi}
+                            updateModule={updateModule}
+                            removeModule={removeModule}
+                            addTopic={addTopic}
+                            removeTopic={removeTopic}
+                            updateTopic={updateTopic}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-white/[0.06] px-6 py-4">
-                <button
-                  onClick={() => setCourseModal(null)}
-                  className="rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-gray-700 dark:text-zinc-300 transition-all hover:bg-gray-200 dark:hover:bg-white/[0.06]"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={saveCourse}
-                  disabled={savingCourse || !courseForm.name.trim() || !courseForm.content_url.trim()}
-                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  {savingCourse ? "Guardando…" : courseModal.mode === "create" ? "Crear curso" : "Guardar cambios"}
-                </button>
-              </div>
+              {!loadingCourse && (
+                <div className="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                  <button
+                    onClick={() => setCourseModal(null)}
+                    className="rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-gray-700 dark:text-zinc-300 transition-all hover:bg-gray-200 dark:hover:bg-white/[0.06]"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={saveCourse}
+                    disabled={savingCourse || !courseForm.name.trim()}
+                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    {savingCourse ? "Guardando…" : courseModal.mode === "create" ? "Crear curso" : "Guardar cambios"}
+                  </button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

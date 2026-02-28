@@ -78,12 +78,36 @@ class Course(Base):
     )
     name = Column(String(255), nullable=False, server_default=text("'Curso obligatorio'"))
     description = Column(Text, nullable=True)
-    content_url = Column(Text, nullable=False)
     quiz_data = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     is_active = Column(Boolean, nullable=False, server_default=text("true"))
 
     opportunity = relationship("Opportunity", back_populates="course")
+    modules = relationship("CourseModule", back_populates="course", cascade="all, delete-orphan", order_by="CourseModule.order")
     progress_records = relationship("UserProgress", back_populates="course", cascade="all, delete-orphan")
+
+
+class CourseModule(Base):
+    __tablename__ = "course_modules"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    course_id = Column(BigInteger, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    order = Column(Integer, nullable=False, server_default=text("0"))
+
+    course = relationship("Course", back_populates="modules")
+    topics = relationship("CourseTopic", back_populates="module", cascade="all, delete-orphan", order_by="CourseTopic.order")
+
+
+class CourseTopic(Base):
+    __tablename__ = "course_topics"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    module_id = Column(BigInteger, ForeignKey("course_modules.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(255), nullable=False)
+    content_url = Column(Text, nullable=False)
+    order = Column(Integer, nullable=False, server_default=text("0"))
+
+    module = relationship("CourseModule", back_populates="topics")
 
 class UserProgress(Base):
     __tablename__ = "user_progress"

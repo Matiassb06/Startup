@@ -24,11 +24,17 @@ def _seed_published_opportunity(db, company_user, with_course=False):
     course = None
     if with_course:
         course = models.Course(
+            name="Curso Python Jr",
             opportunity_id=opp.id,
-            content_url="https://learn.example.com/python-jr",
             quiz_data={"questions": 10},
         )
         db.add(course)
+        db.flush()
+        mod = models.CourseModule(course_id=course.id, title="M\u00f3dulo 1", order=0)
+        db.add(mod)
+        db.flush()
+        topic = models.CourseTopic(module_id=mod.id, title="Intro Python", content_url="https://learn.example.com/python-jr", order=0)
+        db.add(topic)
         db.commit()
         db.refresh(course)
 

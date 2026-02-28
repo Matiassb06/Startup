@@ -20,14 +20,19 @@ def _seed_pending_opportunity(db, company_user):
 
 
 def _seed_catalog_course(db):
-    """Helper: crea un curso de catálogo (sin oportunidad) para usar al publicar."""
+    """Helper: crea un curso de cat\u00e1logo con m\u00f3dulos/temas."""
     course = models.Course(
-        name="Curso QA Básico",
-        content_url="https://learn.example.com/qa-basics",
+        name="Curso QA B\u00e1sico",
         opportunity_id=None,
         is_active=True,
     )
     db.add(course)
+    db.flush()
+    mod = models.CourseModule(course_id=course.id, title="M\u00f3dulo 1", order=0)
+    db.add(mod)
+    db.flush()
+    topic = models.CourseTopic(module_id=mod.id, title="Intro QA", content_url="https://learn.example.com/qa-basics", order=0)
+    db.add(topic)
     db.commit()
     db.refresh(course)
     return course
@@ -82,43 +87,6 @@ class TestAdminPublish:
             headers=_auth_header(admin_token),
         )
         assert resp.status_code == 404
-
-
-class TestAdminCourse:
-    def test_upsert_course_create(self, client, admin_token, db, company_user):
-        opp = _seed_pending_opportunity(db, company_user)
-        resp = client.patch(
-            f"/admin/opportunities/{opp.id}/course",
-            json={"name": "Curso QA", "content_url": "https://learn.example.com/qa", "quiz_data": {"q": 5}},
-            headers=_auth_header(admin_token),
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["content_url"] == "https://learn.example.com/qa"
-
-    def test_upsert_course_update(self, client, admin_token, db, company_user):
-        opp = _seed_pending_opportunity(db, company_user)
-        client.patch(
-            f"/admin/opportunities/{opp.id}/course",
-            json={"name": "Curso v1", "content_url": "https://v1.com", "quiz_data": {}},
-            headers=_auth_header(admin_token),
-        )
-        resp = client.patch(
-            f"/admin/opportunities/{opp.id}/course",
-            json={"name": "Curso v2", "content_url": "https://v2.com", "quiz_data": {"updated": True}},
-            headers=_auth_header(admin_token),
-        )
-        assert resp.status_code == 200
-        assert resp.json()["content_url"] == "https://v2.com"
-
-    def test_upsert_course_invalid_url(self, client, admin_token, db, company_user):
-        opp = _seed_pending_opportunity(db, company_user)
-        resp = client.patch(
-            f"/admin/opportunities/{opp.id}/course",
-            json={"content_url": "not-a-url", "quiz_data": {}},
-            headers=_auth_header(admin_token),
-        )
-        assert resp.status_code == 422
 
 
 class TestAdminMetrics:

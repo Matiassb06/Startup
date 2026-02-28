@@ -307,16 +307,31 @@ export default function StudentDashboard() {
                           </div>
                         </div>
 
-                        {/* Course link */}
-                        {opp.course_content_url && (
-                          <a
-                            href={opp.course_content_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 transition-colors hover:text-emerald-700 dark:hover:text-emerald-300"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" /> Ver material del curso
-                          </a>
+                        {/* Course modules & topics */}
+                        {opp.course_modules && opp.course_modules.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {opp.course_modules.map((mod) => (
+                              <div key={mod.id} className="rounded-lg border border-gray-100 dark:border-white/[0.06] bg-gray-50/50 dark:bg-white/[0.02] p-2">
+                                <p className="text-xs font-medium text-gray-700 dark:text-zinc-300">{mod.title}</p>
+                                {mod.topics && mod.topics.length > 0 && (
+                                  <ul className="mt-1 space-y-0.5 pl-3">
+                                    {mod.topics.map((topic) => (
+                                      <li key={topic.id} className="text-xs text-gray-500 dark:text-zinc-400">
+                                        <a
+                                          href={topic.content_url}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:underline transition-colors"
+                                        >
+                                          <ExternalLink className="h-3 w-3 shrink-0" /> {topic.title}
+                                        </a>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         )}
 
                         {/* Complete button */}
