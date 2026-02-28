@@ -295,7 +295,7 @@ export default function AdminDashboard() {
           order: mi,
           topics: m.topics.map((t, ti) => ({
             title: t.title.trim(),
-            content_url: t.content_url.trim(),
+            content_url: t.content_url.trim() || null,
             order: ti,
           })),
         })),

@@ -156,13 +156,17 @@ class StudentOpportunityOut(StrictModel):
 class TopicIn(StrictModel):
     """Tema dentro de un módulo."""
     title: str = Field(min_length=2, max_length=255)
-    content_url: str
+    content_url: str | None = None
     order: int = 0
 
-    @field_validator("content_url")
+    @field_validator("content_url", mode="before")
     @classmethod
-    def validate_content_url(cls, value: str) -> str:
-        normalized = value.strip()
+    def validate_content_url(cls, value) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        if not normalized:
+            return None
         if not (normalized.startswith("http://") or normalized.startswith("https://")):
             raise ValueError("content_url debe iniciar con http:// o https://")
         return normalized
@@ -178,7 +182,7 @@ class ModuleIn(StrictModel):
 class TopicOut(StrictModel):
     id: int
     title: str
-    content_url: str
+    content_url: str | None = None
     order: int
 
 

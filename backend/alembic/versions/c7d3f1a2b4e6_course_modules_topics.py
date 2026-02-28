@@ -37,7 +37,7 @@ def upgrade() -> None:
         sa.Column('id', sa.BigInteger(), autoincrement=True, nullable=False),
         sa.Column('module_id', sa.BigInteger(), nullable=False),
         sa.Column('title', sa.String(length=255), nullable=False),
-        sa.Column('content_url', sa.Text(), nullable=False),
+        sa.Column('content_url', sa.Text(), nullable=True),
         sa.Column('order', sa.Integer(), server_default=sa.text('0'), nullable=False),
         sa.ForeignKeyConstraint(['module_id'], ['course_modules.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),

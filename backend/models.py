@@ -104,7 +104,7 @@ class CourseTopic(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     module_id = Column(BigInteger, ForeignKey("course_modules.id", ondelete="CASCADE"), nullable=False, index=True)
     title = Column(String(255), nullable=False)
-    content_url = Column(Text, nullable=False)
+    content_url = Column(Text, nullable=True)
     order = Column(Integer, nullable=False, server_default=text("0"))
 
     module = relationship("CourseModule", back_populates="topics")
