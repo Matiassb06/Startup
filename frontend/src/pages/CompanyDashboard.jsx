@@ -12,6 +12,7 @@ import {
   Sparkles,
   Users,
   X,
+  XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -186,6 +187,7 @@ export default function CompanyDashboard() {
   const statusColors = {
     pending_review: "border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400",
     published: "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    rejected: "border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400",
     closed: "border-zinc-200 dark:border-zinc-500/30 bg-gray-100 dark:bg-zinc-500/10 text-gray-500 dark:text-zinc-400",
     draft: "border-zinc-200 dark:border-zinc-600/30 bg-gray-100 dark:bg-zinc-600/10 text-gray-500 dark:text-zinc-500",
   };
@@ -193,6 +195,7 @@ export default function CompanyDashboard() {
   const statusLabels = {
     pending_review: "En revisión",
     published: "Publicada",
+    rejected: "Rechazada",
     closed: "Cerrada",
     draft: "Borrador",
   };
@@ -243,11 +246,12 @@ export default function CompanyDashboard() {
 
               {/* Stats Cards */}
               {stats && (
-                <motion.div variants={stagger} initial="initial" animate="animate" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <motion.div variants={stagger} initial="initial" animate="animate" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   {[
                     { label: "Total oportunidades", value: stats.total_opportunities, icon: BriefcaseBusiness, color: "text-gray-900 dark:text-zinc-100" },
                     { label: "Publicadas", value: stats.published, icon: CheckCircle2, color: "text-emerald-600 dark:text-emerald-400" },
                     { label: "En revisión", value: stats.pending_review, icon: Clock3, color: "text-amber-600 dark:text-amber-400" },
+                    { label: "Rechazadas", value: stats.rejected || 0, icon: XCircle, color: "text-red-600 dark:text-red-400" },
                     { label: "Total postulantes", value: stats.total_applicants, icon: Users, color: "text-emerald-600 dark:text-emerald-400" },
                   ].map((stat) => (
                     <motion.div key={stat.label} variants={fadeUp} className="overflow-hidden rounded-xl border border-gray-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-5">
@@ -377,6 +381,12 @@ export default function CompanyDashboard() {
                           </span>
                         </div>
                         <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-gray-500 dark:text-zinc-400">{opp.description}</p>
+                        {opp.status === "rejected" && opp.rejection_reason && (
+                          <div className="mt-3 rounded-lg border border-red-200 dark:border-red-500/20 bg-red-50 dark:bg-red-500/5 p-3">
+                            <p className="text-xs font-semibold text-red-700 dark:text-red-400 mb-1">Motivo del rechazo:</p>
+                            <p className="text-xs text-red-600 dark:text-red-300 leading-relaxed">{opp.rejection_reason}</p>
+                          </div>
+                        )}
                         <div className="mt-4 flex items-center justify-between">
                           <p className="text-xs text-gray-400 dark:text-zinc-600">ID #{opp.id}</p>
                           {opp.status === "published" && (

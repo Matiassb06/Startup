@@ -27,6 +27,7 @@ class OpportunityStatus(str, enum.Enum):
     draft = "draft"
     pending_review = "pending_review"
     published = "published"
+    rejected = "rejected"
     closed = "closed"
 
 class User(Base):
@@ -61,6 +62,8 @@ class Opportunity(Base):
         nullable=False,
         server_default=text("'pending_review'"),
     )
+
+    rejection_reason = Column(Text, nullable=True)
 
     company = relationship("User", back_populates="company_opportunities", foreign_keys=[company_id])
     course = relationship("Course", back_populates="opportunity", uselist=False, cascade="all, delete-orphan")

@@ -172,6 +172,11 @@ export default function AdminDashboard() {
   const [aiForm, setAiForm] = useState({ name: "", description: "", requirements: "", num_modules: 3, topics_per_module: 3, opportunity_id: "" });
   const [aiGenerating, setAiGenerating] = useState(false);
 
+  /* ── Modal de rechazo ── */
+  const [rejectModal, setRejectModal] = useState(null); // null | opportunity object
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -403,6 +408,34 @@ export default function AdminDashboard() {
       setAiGenerating(false);
     }
   };
+
+  /* ── Rechazar oportunidad ── */
+  const openRejectModal = (opp) => {
+    setRejectModal(opp);
+    setRejectReason("");
+  };
+
+  const rejectOpportunity = async () => {
+    if (!rejectReason.trim() || rejectReason.trim().length < 5) {
+      setStatus({ type: "error", message: "Escribe un motivo de al menos 5 caracteres." });
+      return;
+    }
+    try {
+      setRejecting(true);
+      await api.patch(`/admin/opportunities/${rejectModal.id}/reject`, { reason: rejectReason.trim() });
+      setRejectModal(null);
+      setRejectReason("");
+      const pendingData = await api.get("/admin/opportunities/pending");
+      setPending(Array.isArray(pendingData) ? pendingData : []);
+      setStatus({ type: "success", message: "Oportunidad rechazada. La empresa será notificada." });
+    } catch (error) {
+      const msg = error?.data?.detail || error?.message || "Error al rechazar.";
+      setStatus({ type: "error", message: String(msg) });
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   const logout = () => {
     clearSession();
     navigate("/login");
@@ -499,10 +532,10 @@ export default function AdminDashboard() {
                           <CheckCircle2 className="h-4 w-4" /> Aprobar y asignar curso
                         </button>
                         <button
-                          onClick={() => openAiModalForOpp(opp)}
-                          className="inline-flex items-center gap-2 rounded-lg border border-violet-300 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 px-4 py-2.5 text-xs font-semibold text-violet-700 dark:text-violet-300 shadow-sm transition-all hover:bg-violet-100 dark:hover:bg-violet-500/20 active:scale-[0.98]"
+                          onClick={() => openRejectModal(opp)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-red-300 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-700 dark:text-red-300 shadow-sm transition-all hover:bg-red-100 dark:hover:bg-red-500/20 active:scale-[0.98]"
                         >
-                          <Sparkles className="h-4 w-4" /> Generar curso con IA
+                          <X className="h-4 w-4" /> Rechazar
                         </button>
                       </div>
                     </motion.article>
@@ -923,6 +956,86 @@ export default function AdminDashboard() {
                 >
                   <CheckCircle2 className="h-4 w-4" />
                   {publishing ? "Publicando…" : "Publicar oportunidad"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════ Modal: Rechazar oportunidad ═══════ */}
+      <AnimatePresence>
+        {rejectModal && (
+          <motion.div
+            key="reject-modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setRejectModal(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-zinc-900 shadow-2xl"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                <div>
+                  <h3 className="text-base font-semibold text-red-600 dark:text-red-400">Rechazar oportunidad</h3>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-500">
+                    Explica el motivo del rechazo. Este mensaje será visible para la empresa.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setRejectModal(null)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Opportunity info */}
+              <div className="px-6 pt-5">
+                <div className="rounded-lg border border-gray-200 dark:border-white/[0.06] bg-gray-50 dark:bg-white/[0.02] p-3">
+                  <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">{rejectModal.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-zinc-500">{rejectModal.description}</p>
+                </div>
+              </div>
+
+              {/* Textarea */}
+              <div className="px-6 pt-5 pb-6">
+                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                  Motivo del rechazo <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Ej: La descripción no es lo suficientemente detallada, faltan requisitos específicos…"
+                  className="w-full rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-sm text-gray-900 dark:text-zinc-100 placeholder:text-gray-400 dark:placeholder:text-zinc-600 outline-none transition-all focus:border-red-400 dark:focus:border-red-500/50 focus:ring-1 focus:ring-red-200 dark:focus:ring-red-500/30 resize-none"
+                />
+                <p className="mt-1 text-xs text-gray-400 dark:text-zinc-600">Mínimo 5 caracteres</p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-white/[0.06] px-6 py-4">
+                <button
+                  onClick={() => setRejectModal(null)}
+                  className="rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-gray-700 dark:text-zinc-300 transition-all hover:bg-gray-200 dark:hover:bg-white/[0.06]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={rejectOpportunity}
+                  disabled={rejecting || rejectReason.trim().length < 5}
+                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-red-500 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <X className="h-4 w-4" />
+                  {rejecting ? "Rechazando…" : "Confirmar rechazo"}
                 </button>
               </div>
             </motion.div>

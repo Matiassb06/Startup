@@ -127,12 +127,17 @@ class OpportunityOut(StrictModel):
     requirements: Optional[str] = None
     company_id: int
     status: models.OpportunityStatus
+    rejection_reason: Optional[str] = None
 
 
 class OpportunityCreateIn(StrictModel):
     title: str = Field(min_length=4, max_length=180)
     description: str = Field(min_length=10, max_length=3000)
     requirements: Optional[str] = Field(default=None, max_length=2000)
+
+
+class RejectOpportunityIn(StrictModel):
+    reason: str = Field(min_length=5, max_length=2000)
 
 
 class StudentOpportunityOut(StrictModel):
@@ -869,6 +874,11 @@ def read_company_stats(
         models.Opportunity.status == models.OpportunityStatus.pending_review,
     ).count()
 
+    rejected = db.query(models.Opportunity).filter(
+        models.Opportunity.company_id == current_user.id,
+        models.Opportunity.status == models.OpportunityStatus.rejected,
+    ).count()
+
     opp_ids = [o.id for o in db.query(models.Opportunity.id).filter(models.Opportunity.company_id == current_user.id).all()]
     total_applicants = 0
     if opp_ids:
@@ -878,6 +888,7 @@ def read_company_stats(
         "total_opportunities": total_opps,
         "published": published,
         "pending_review": pending,
+        "rejected": rejected,
         "total_applicants": total_applicants,
     }
 
@@ -1076,6 +1087,26 @@ def publish_opportunity(
 
     opportunity.status = models.OpportunityStatus.published
     _log_event(db, "opportunity_published", user_id=current_user.id, opportunity_id=opportunity.id, payload={"status": "published"})
+    db.commit()
+    db.refresh(opportunity)
+    return opportunity
+
+
+@app.patch("/admin/opportunities/{opportunity_id}/reject", response_model=OpportunityOut)
+def reject_opportunity(
+    opportunity_id: int,
+    payload: RejectOpportunityIn,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.admin)),
+    db: Session = Depends(database.get_db),
+):
+    opportunity = db.query(models.Opportunity).filter(models.Opportunity.id == opportunity_id).first()
+    if not opportunity:
+        raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
+    if opportunity.status != models.OpportunityStatus.pending_review:
+        raise HTTPException(status_code=400, detail="Solo se pueden rechazar oportunidades en revisión")
+
+    opportunity.status = models.OpportunityStatus.rejected
+    opportunity.rejection_reason = payload.reason
     db.commit()
     db.refresh(opportunity)
     return opportunity
