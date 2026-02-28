@@ -1,6 +1,14 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
-const ThemeContext = createContext({ theme: "dark", toggleTheme: () => {} });
+const ThemeContext = createContext({
+  theme: "dark",       // "dark" | "light" | "system"
+  resolved: "dark",    // actual applied theme
+  setTheme: () => {},
+});
+
+function getSystemTheme() {
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
@@ -11,9 +19,11 @@ export function ThemeProvider({ children }) {
     }
   });
 
+  const resolved = theme === "system" ? getSystemTheme() : theme;
+
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") {
+    if (resolved === "dark") {
       root.classList.add("dark");
     } else {
       root.classList.remove("dark");
@@ -21,12 +31,19 @@ export function ThemeProvider({ children }) {
     try {
       localStorage.setItem("tth-theme", theme);
     } catch {}
+  }, [theme, resolved]);
+
+  /* Listen for OS theme changes when in "system" mode */
+  useEffect(() => {
+    if (theme !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = () => setTheme((t) => (t === "system" ? "system" : t)); // force re-render
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
   }, [theme]);
 
-  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
-
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, resolved, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

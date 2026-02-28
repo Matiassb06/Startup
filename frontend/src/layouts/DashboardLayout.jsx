@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { LogOut, Menu, Moon, Sparkles, Sun, X } from "lucide-react";
+import { LogOut, Menu, Sparkles, X } from "lucide-react";
 import { useState } from "react";
-import { useTheme } from "../lib/ThemeContext";
 
 /* ─── Drawer animation ─── */
 const drawerVariants = {
@@ -25,7 +24,6 @@ export default function DashboardLayout({
   children,
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
 
   const initials = userName
     ? userName.split(" ").filter(Boolean).map((w) => w[0]).join("").toUpperCase().slice(0, 2)
@@ -108,19 +106,6 @@ export default function DashboardLayout({
             ))}
           </div>
         )}
-
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium text-zinc-400 transition-all duration-150 hover:bg-white/5 hover:text-zinc-200"
-        >
-          {theme === "dark" ? (
-            <Sun className="h-[18px] w-[18px] shrink-0 text-zinc-500 group-hover:text-amber-400 transition-colors" />
-          ) : (
-            <Moon className="h-[18px] w-[18px] shrink-0 text-zinc-500 group-hover:text-indigo-400 transition-colors" />
-          )}
-          <span className="flex-1 text-left">{theme === "dark" ? "Modo Claro" : "Modo Oscuro"}</span>
-        </button>
 
         {/* Logout */}
         <button

@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../lib/api";
 import { clearSession, getSession } from "../lib/session";
+import SettingsPanel from "../components/SettingsPanel";
 
 /* ───── Animation Variants ───── */
 const stagger = { animate: { transition: { staggerChildren: 0.07 } } };
@@ -524,11 +525,7 @@ export default function CompanyDashboard() {
           {/* ══════════ TAB: Ajustes ══════════ */}
           {activeTab === "settings" && (
             <motion.div key="settings" {...tabContent}>
-              <ComingSoon
-                icon={Settings}
-                title="Ajustes"
-                description="Aquí podrás gestionar preferencias de tu empresa, usuarios corporativos y tema visual. Esta funcionalidad estará disponible pronto."
-              />
+              <SettingsPanel role="company" profile={profile} />
             </motion.div>
           )}
         </AnimatePresence>

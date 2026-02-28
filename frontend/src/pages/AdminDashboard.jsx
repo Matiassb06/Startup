@@ -16,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../lib/api";
 import { clearSession } from "../lib/session";
+import SettingsPanel from "../components/SettingsPanel";
 
 /* ───── Animation Variants ───── */
 const stagger = { animate: { transition: { staggerChildren: 0.07 } } };
@@ -465,11 +466,7 @@ export default function AdminDashboard() {
           {/* ══════════ TAB: Ajustes ══════════ */}
           {activeTab === "settings" && (
             <motion.div key="settings" {...tabContent}>
-              <ComingSoon
-                icon={Settings}
-                title="Ajustes del Sistema"
-                description="Aquí podrás configurar parámetros de la plataforma, gestionar roles y preferencias del sistema. Esta funcionalidad estará disponible pronto."
-              />
+              <SettingsPanel role="admin" profile={null} />
             </motion.div>
           )}
         </AnimatePresence>

@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import { api } from "../lib/api";
 import { clearSession, getSession } from "../lib/session";
+import SettingsPanel from "../components/SettingsPanel";
 
 /* ───── Animation Variants ───── */
 const stagger = { animate: { transition: { staggerChildren: 0.07 } } };
@@ -567,11 +568,7 @@ export default function StudentDashboard() {
           {/* ══════════ TAB: Ajustes ══════════ */}
           {activeTab === "settings" && (
             <motion.div key="settings" {...tabContent}>
-              <ComingSoon
-                icon={Settings}
-                title="Ajustes"
-                description="Aquí podrás configurar tu cuenta, preferencias de notificación y tema visual. Esta funcionalidad estará disponible pronto."
-              />
+              <SettingsPanel role="student" profile={profile} />
             </motion.div>
           )}
         </AnimatePresence>
