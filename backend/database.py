@@ -1,23 +1,30 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-# CONFIGURACIÓN DE LA CONEXIÓN
-# Estructura: postgresql://usuario:contraseña@servidor:puerto/nombre_db
+# Cargar variables de entorno desde .env
+load_dotenv()
 
-# IMPORTANTE: Cambia 'admin' por tu contraseña real si pusiste otra.
-# Si tu contraseña es 1234, pon: postgres:1234
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:1234@localhost/traintohire"
-# Creamos el motor (El coche)
+# CONFIGURACIÓN DE LA CONEXIÓN (ahora desde .env)
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:1234@localhost/traintohire")
+
+# JWT settings (accesibles desde cualquier módulo)
+JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+JWT_EXPIRATION_MINUTES = int(os.getenv("JWT_EXPIRATION_MINUTES", "1440"))
+
+# Motor de la base de datos
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
-# Creamos la sesión (El conductor)
+# Sesión
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# La base para tus modelos
+# Base para los modelos
 Base = declarative_base()
 
-# Función para obtener la DB (La llave)
+# Dependency para obtener la DB
 def get_db():
     db = SessionLocal()
     try:

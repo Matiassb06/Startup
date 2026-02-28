@@ -1,12 +1,12 @@
 import { Navigate, useLocation } from "react-router-dom";
 
-import { getSession } from "../lib/session";
+import { getSession, isAuthenticated } from "../lib/session";
 
 export function ProtectedRoute({ requiredRole, children }) {
   const location = useLocation();
   const session = getSession();
 
-  if (!session?.role) {
+  if (!isAuthenticated() || !session?.role) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
