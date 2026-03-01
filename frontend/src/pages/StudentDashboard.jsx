@@ -120,17 +120,6 @@ export default function StudentDashboard() {
     })();
   }, [navigate]);
 
-  const completeCourse = async (opp) => {
-    try {
-      await api.post(`/student/courses/${opp.course_id}/complete`, {});
-      const oppsData = await api.get("/student/opportunities");
-      setOpportunities(Array.isArray(oppsData) ? oppsData : []);
-      setStatus({ type: "success", message: "Curso completado. Postulación desbloqueada." });
-    } catch (error) {
-      setStatus({ type: "error", message: error.message || "Error al completar curso." });
-    }
-  };
-
   const applyToOpportunity = async (opportunityId) => {
     try {
       const result = await api.post("/student/apply", { opportunity_id: opportunityId });
@@ -373,14 +362,14 @@ export default function StudentDashboard() {
                           </div>
                         )}
 
-                        {/* Complete button + AI Tutor button */}
+                        {/* Course action buttons */}
                         {!opp.course_completed && opp.course_id && (
                           <div className="mt-4 flex flex-wrap items-center gap-2">
                             <button
-                              onClick={() => completeCourse(opp)}
+                              onClick={() => navigate(`/student/course/${opp.course_id}`)}
                               className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-emerald-500 active:scale-[0.98]"
                             >
-                              <BookOpen className="h-4 w-4" /> Comenzar curso
+                              <BookOpen className="h-4 w-4" /> {progress > 0 ? "Continuar curso" : "Comenzar curso"}
                             </button>
                             <button
                               onClick={() => openTutor(opp.course_id)}
@@ -391,7 +380,13 @@ export default function StudentDashboard() {
                           </div>
                         )}
                         {opp.course_completed && opp.course_id && (
-                          <div className="mt-4">
+                          <div className="mt-4 flex flex-wrap items-center gap-2">
+                            <button
+                              onClick={() => navigate(`/student/course/${opp.course_id}`)}
+                              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 dark:border-white/[0.08] bg-gray-50 dark:bg-white/[0.03] px-4 py-2 text-xs font-semibold text-gray-700 dark:text-zinc-300 transition-all hover:bg-gray-200 dark:hover:bg-white/[0.06] active:scale-[0.98]"
+                            >
+                              <BookOpen className="h-4 w-4" /> Revisar curso
+                            </button>
                             <button
                               onClick={() => openTutor(opp.course_id)}
                               className="inline-flex items-center gap-2 rounded-lg border border-violet-300 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 px-4 py-2 text-xs font-semibold text-violet-700 dark:text-violet-300 transition-all hover:bg-violet-100 dark:hover:bg-violet-500/20 active:scale-[0.98]"

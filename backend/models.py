@@ -123,6 +123,19 @@ class UserProgress(Base):
     user = relationship("User", back_populates="progress_records")
     course = relationship("Course", back_populates="progress_records")
 
+
+class TopicProgress(Base):
+    """Tracks per-topic completion for a student."""
+    __tablename__ = "topic_progress"
+
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    topic_id = Column(BigInteger, ForeignKey("course_topics.id", ondelete="CASCADE"), primary_key=True)
+    completed_at = Column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+    user = relationship("User")
+    topic = relationship("CourseTopic")
+
+
 class Application(Base):
     __tablename__ = "applications"
     __table_args__ = (UniqueConstraint("user_id", "opportunity_id", name="uq_applications_user_opportunity"),)

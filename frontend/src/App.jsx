@@ -7,6 +7,7 @@ import { AboutUs } from "./pages/AboutUs";
 import { AuthPage } from "./pages/AuthPage";
 import { Contact } from "./pages/Contact";
 import CompanyDashboard from "./pages/CompanyDashboard";
+import CourseLearning from "./pages/CourseLearning";
 import { LandingPage } from "./pages/LandingPage";
 import { Methodology } from "./pages/Methodology";
 import StudentDashboard from "./pages/StudentDashboard";
@@ -31,6 +32,15 @@ export default function App() {
         element={
           <ProtectedRoute requiredRole="student">
             <StudentDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/student/course/:courseId"
+        element={
+          <ProtectedRoute requiredRole="student">
+            <CourseLearning />
           </ProtectedRoute>
         }
       />

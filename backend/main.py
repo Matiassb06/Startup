@@ -251,6 +251,43 @@ class CourseCompletionOut(StrictModel):
     score: Optional[int] = None
 
 
+# ── Student course detail (learning view) ──
+class LearningTopicOut(StrictModel):
+    id: int
+    title: str
+    content_url: Optional[str] = None
+    order: int
+    completed: bool = False
+
+
+class LearningModuleOut(StrictModel):
+    id: int
+    title: str
+    order: int
+    topics: list[LearningTopicOut] = Field(default_factory=list)
+    completed: bool = False
+
+
+class StudentCourseDetailOut(StrictModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    opportunity_title: Optional[str] = None
+    opportunity_id: Optional[int] = None
+    modules: list[LearningModuleOut] = Field(default_factory=list)
+    total_topics: int
+    completed_topics: int
+    progress_percent: int
+    is_completed: bool
+
+
+class TopicCompleteOut(StrictModel):
+    topic_id: int
+    completed: bool
+    course_progress_percent: int
+    course_completed: bool
+
+
 # ── Apply ──
 class ApplyIn(StrictModel):
     opportunity_id: int
@@ -569,6 +606,19 @@ def read_student_opportunities(
             models.Application.opportunity_id == opp.id,
         ).first() is not None
 
+        # Calculate topic-level progress
+        progress_pct = 0
+        if course:
+            all_topic_ids = [t.id for m in course.modules for t in m.topics]
+            if all_topic_ids:
+                done_count = db.query(models.TopicProgress).filter(
+                    models.TopicProgress.user_id == current_user.id,
+                    models.TopicProgress.topic_id.in_(all_topic_ids),
+                ).count()
+                progress_pct = round(done_count / len(all_topic_ids) * 100)
+            if is_completed:
+                progress_pct = 100
+
         response.append(
             StudentOpportunityOut(
                 id=opp.id,
@@ -586,7 +636,7 @@ def read_student_opportunities(
                         topics=[TopicOut(id=t.id, title=t.title, content_url=t.content_url, order=t.order) for t in m.topics],
                     ) for m in course.modules
                 ] if course else [],
-                progress_percent=100 if is_completed else 0,
+                progress_percent=progress_pct,
                 course_completed=is_completed,
                 can_apply=bool(opp.status == models.OpportunityStatus.published and (not course or is_completed) and not already_applied),
                 already_applied=already_applied,
@@ -640,6 +690,160 @@ def complete_course(
         course_id=progress.course_id,
         is_completed=bool(progress.is_completed),
         score=progress.score,
+    )
+
+
+# ── Student: course detail (learning view) ──
+
+def _build_course_detail(db, course, user_id: int) -> StudentCourseDetailOut:
+    """Build a full course detail with per-topic completion status."""
+    completed_topic_ids = set(
+        row[0] for row in db.query(models.TopicProgress.topic_id).filter(
+            models.TopicProgress.user_id == user_id,
+        ).all()
+    )
+
+    total_topics = 0
+    completed_count = 0
+    modules_out = []
+
+    for mod in course.modules:
+        topics_out = []
+        mod_completed = True
+        for t in mod.topics:
+            total_topics += 1
+            done = t.id in completed_topic_ids
+            if done:
+                completed_count += 1
+            else:
+                mod_completed = False
+            topics_out.append(LearningTopicOut(
+                id=t.id, title=t.title, content_url=t.content_url,
+                order=t.order, completed=done,
+            ))
+        if not topics_out:
+            mod_completed = False
+        modules_out.append(LearningModuleOut(
+            id=mod.id, title=mod.title, order=mod.order,
+            topics=topics_out, completed=mod_completed,
+        ))
+
+    progress_pct = round(completed_count / total_topics * 100) if total_topics > 0 else 0
+
+    # Check if course overall is completed
+    user_progress = db.query(models.UserProgress).filter(
+        models.UserProgress.user_id == user_id,
+        models.UserProgress.course_id == course.id,
+    ).first()
+    is_completed = bool(user_progress and user_progress.is_completed)
+
+    opp_title = None
+    opp_id = None
+    if course.opportunity:
+        opp_title = course.opportunity.title
+        opp_id = course.opportunity.id
+
+    return StudentCourseDetailOut(
+        id=course.id,
+        name=course.name,
+        description=course.description,
+        opportunity_title=opp_title,
+        opportunity_id=opp_id,
+        modules=modules_out,
+        total_topics=total_topics,
+        completed_topics=completed_count,
+        progress_percent=progress_pct,
+        is_completed=is_completed,
+    )
+
+
+@app.get("/student/courses/{course_id}", response_model=StudentCourseDetailOut)
+def get_student_course_detail(
+    course_id: int,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.student)),
+    db: Session = Depends(database.get_db),
+):
+    """Full course detail with per-topic completion status for the learning page."""
+    course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso no encontrado")
+    return _build_course_detail(db, course, current_user.id)
+
+
+@app.post("/student/courses/{course_id}/topics/{topic_id}/complete", response_model=TopicCompleteOut)
+def complete_topic(
+    course_id: int,
+    topic_id: int,
+    current_user: models.User = Depends(auth.require_role(models.UserRole.student)),
+    db: Session = Depends(database.get_db),
+):
+    """Mark a single topic as completed. Auto-completes the course when all topics are done."""
+    course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Curso no encontrado")
+
+    topic = db.query(models.CourseTopic).join(models.CourseModule).filter(
+        models.CourseTopic.id == topic_id,
+        models.CourseModule.course_id == course_id,
+    ).first()
+    if not topic:
+        raise HTTPException(status_code=404, detail="Tema no encontrado en este curso")
+
+    # Check if already completed
+    existing = db.query(models.TopicProgress).filter(
+        models.TopicProgress.user_id == current_user.id,
+        models.TopicProgress.topic_id == topic_id,
+    ).first()
+
+    if not existing:
+        db.add(models.TopicProgress(user_id=current_user.id, topic_id=topic_id))
+        db.flush()
+
+    # Count total and completed topics
+    all_topic_ids = [
+        t.id for m in course.modules for t in m.topics
+    ]
+    total = len(all_topic_ids)
+    completed_ids = set(
+        row[0] for row in db.query(models.TopicProgress.topic_id).filter(
+            models.TopicProgress.user_id == current_user.id,
+            models.TopicProgress.topic_id.in_(all_topic_ids),
+        ).all()
+    ) if all_topic_ids else set()
+    completed = len(completed_ids)
+    pct = round(completed / total * 100) if total > 0 else 0
+
+    # Auto-complete course if all topics are done
+    course_completed = completed == total and total > 0
+    if course_completed:
+        progress = db.query(models.UserProgress).filter(
+            models.UserProgress.user_id == current_user.id,
+            models.UserProgress.course_id == course_id,
+        ).first()
+        if not progress:
+            progress = models.UserProgress(
+                user_id=current_user.id, course_id=course_id,
+                is_completed=True, score=100,
+            )
+            db.add(progress)
+        else:
+            progress.is_completed = True
+            progress.score = 100
+        _log_event(
+            db, "course_completed",
+            user_id=current_user.id,
+            opportunity_id=course.opportunity_id,
+            course_id=course_id,
+            payload={"auto_completed": True, "topics_completed": completed},
+        )
+
+    db.commit()
+
+    return TopicCompleteOut(
+        topic_id=topic_id,
+        completed=True,
+        course_progress_percent=pct,
+        course_completed=course_completed,
     )
 
 
